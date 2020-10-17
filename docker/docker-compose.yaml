@@ -1,0 +1,22 @@
+version: '3'
+services:
+
+  redis5:
+    image: redis:6.0.8-alpine
+    container_name: redis-streams-zio-redis6
+    restart: unless-stopped
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    entrypoint: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - 6377:6377
+
+  # https://docs.redislabs.com/latest/ri/installing/install-docker/
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: redis-streams-zio-redis-insight
+    restart: unless-stopped
+    volumes:
+      - ./docker-volumes/redisinsight:/db
+    ports:
+      - 8002:8001

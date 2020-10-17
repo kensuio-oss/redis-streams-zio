@@ -1,2 +1,7 @@
-*.class
+.DS_Store
+.idea
+.bloop
+.metals/
+target
 *.log
+docker/docker-volumes
