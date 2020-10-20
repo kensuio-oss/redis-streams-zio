@@ -14,7 +14,7 @@ object NotificationsStreamCollector {
     with Has[NotificationsStreamConsumerConfig]
     with RedisStream[StreamInstance.Notifications]
 
-  def run(): ZIO[Input, Throwable, Unit] =
+  def run(): ZIO[Input, Throwable, Long] =
     log.locally(Name(List(getClass.getName))) {
       RedisZCollector.executeFor[StreamInstance.Notifications, NotificationsStreamConsumerConfig]()
     }
