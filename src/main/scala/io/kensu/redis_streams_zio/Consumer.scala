@@ -20,9 +20,8 @@ import zio.logging.slf4j.Slf4jLogger
 object Consumer extends App {
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
-    streams
+    streams.useForever
       .provideCustomLayer(liveEnv)
-      .useForever
       .exitCode
 
   private val streams =

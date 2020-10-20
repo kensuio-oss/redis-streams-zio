@@ -9,6 +9,7 @@ import zio._
 import zio.clock.Clock
 import zio.duration._
 import zio.logging.{ Logger, Logging }
+import zio.macros.accessible
 
 trait EventSerializable[E] {
   def serialize(e: E): Array[Byte]
@@ -28,6 +29,7 @@ final case class PublishedEventId(value: String) extends AnyVal {
   override def toString: String = value
 }
 
+@accessible()
 object EventProducer {
 
   type EventProducer = Has[Service]
@@ -48,13 +50,6 @@ object EventProducer {
       event: E
     ): Task[PublishedEventId]
   }
-
-  def publish[E: EventSerializable: Tag](
-    streamName: StreamName,
-    streamKey: StreamKey,
-    event: E
-  ): RIO[EventProducer, PublishedEventId] =
-    RIO.accessM(_.get.publish(streamName, streamKey, event))
 
   val redis: ZLayer[RedisClient with Clock with Logging, Throwable, EventProducer] =
     ZLayer.fromServices[RedissonClient, Clock.Service, Logger[String], Service] { (redisClient, clock, logger) =>

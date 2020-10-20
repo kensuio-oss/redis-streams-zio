@@ -362,7 +362,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
     stream: StreamInput[StreamInstance.Notifications, StreamConsumerConfig],
     redisData: Chunk[ReadGroupResult]
   ) =
-    stream.mapM(a => eventsMapper(a)).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
+    stream.mapM(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
