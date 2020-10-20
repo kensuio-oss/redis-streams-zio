@@ -1,9 +1,10 @@
 package io.kensu.redis_streams_zio
 
-import io.kensu.redis_streams_zio.config.RedisConfig
+import io.kensu.redis_streams_zio.config.{ RedisConfig, StreamName }
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
 import io.kensu.redis_streams_zio.redis.streams.notifications.NotificationsStreamProducerConfig
+import io.kensu.redis_streams_zio.redis.streams.{ RedisStream, StreamInstance }
 import io.kensu.redis_streams_zio.services.producers.EventProducer
 import pureconfig.generic.auto._
 import pureconfig.{ ConfigObjectSource, ConfigSource }
@@ -26,7 +27,7 @@ object Producer extends App {
     for {
       config <- ZIO.service[NotificationsStreamProducerConfig]
       str    <- nextString(10)
-      _      <- EventProducer.publish(config.streamName, config.addKey, str)
+      _      <- EventProducer.publish[StreamInstance.Notifications, String](config.addKey, str)
     } yield ()
 
   private val liveEnv = {
@@ -44,17 +45,18 @@ object Producer extends App {
     val notificationsProducerConfig =
       config.at("kensu.redis-streams.producers.notifications").loadOrThrow[NotificationsStreamProducerConfig]
 
-//    val notificationsStream = {
-//      notificationsConsumerConfig.streamName match {
-//        case s @ StreamName("notifications") =>
-//          redisClient >>> RedisStream.buildFor(StreamInstance.Notifications(s))
-//        case s => ZLayer.fail(new IllegalStateException(s"Unsupported stream $s"))
-//      }
-//    }
+    val notificationsStream = {
+      notificationsProducerConfig.streamName match {
+        case s @ StreamName("notifications") =>
+          val streamInstance = StreamInstance.Notifications(s)
+          val redisStream    = (redisClient >>> RedisStream.buildFor(streamInstance))
+          (redisStream ++ clock ++ logging) >>> EventProducer.redisFor(streamInstance)
 
-    val eventProducer = (redisClient ++ clock) ++ logging >+> EventProducer.redis
+        case s => ZLayer.fail(new IllegalStateException(s"Unsupported stream $s"))
+      }
+    }
 
-    clock ++ logging ++ ZLayer.succeed(notificationsProducerConfig) ++ eventProducer
+    clock ++ logging ++ ZLayer.succeed(notificationsProducerConfig) ++ notificationsStream
 
   }
 }

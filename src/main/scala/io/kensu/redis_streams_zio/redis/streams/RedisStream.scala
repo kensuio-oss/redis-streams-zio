@@ -42,6 +42,7 @@ object RedisStream {
       ids: NonEmptyChunk[StreamMessageId]
     ): Task[Chunk[StreamMessageId]]
     def listPending(groupName: StreamGroupName, count: Int): Task[Chunk[PendingEntry]]
+    def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId]
   }
 
   sealed trait CreateGroupStrategy
@@ -149,6 +150,9 @@ object RedisStream {
                 redissonStream.listPendingAsync(groupName.value, StreamMessageId.MIN, StreamMessageId.MAX, count)
               )
               .map(l => Chunk.fromIterable(l.asScala))
+
+          override def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId] =
+            Task.fromCompletionStage(redissonStream.addAsync(key.value.getBytes("UTF-8"), payload.toArray))
         }
       )
       .toLayer
