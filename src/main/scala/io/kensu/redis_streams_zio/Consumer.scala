@@ -60,8 +60,6 @@ object Consumer extends App {
 
     val clock = ZLayer.identity[Clock]
 
-    //    val eventProducer = (redisClient ++ clock) ++ logging >+> EventProducer.redis
-
     val notificationsConsumerConfig =
       config.at("kensu.redis-streams.consumers.notifications").loadOrThrow[NotificationsStreamConsumerConfig]
 

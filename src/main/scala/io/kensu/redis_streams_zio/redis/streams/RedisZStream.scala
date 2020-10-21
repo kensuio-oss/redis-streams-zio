@@ -25,16 +25,17 @@ object RedisZStream {
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
   ): ZIO[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
+      def setupStream(status: Ref[StreamSourceStatus]) =
+        asStream(getEvents(status))
+          .via(eventsProcessor)
+          .mapM(acknowledge[S, C])
+          .repeat(repeatStrategy)
+          .haltWhen(shutdownHook)
+
       (for {
         streamStatus <- initialStreamStatus
         _            <- assureStreamGroup
-        stream = asStream(getEvents(streamStatus))
-          .via(eventsProcessor)
-          .mapM(acknowledge[S, C]) //Fails to compile without explicit types
-          .repeat(repeatStrategy)
-          .haltWhen(shutdownHook)
-        result <- stream.runSum
-
+        result       <- setupStream(streamStatus).runSum
       } yield result)
         .tapCause(t => log.error(s"Failed processing ${config.streamName} stream, will be retried", t))
         .retry(Scheduling.exponentialBackoff(config.retry.min, config.retry.max, config.retry.factor))
@@ -53,17 +54,18 @@ object RedisZStream {
       )
 
   private def assureStreamGroup[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag] =
-    for {
-      config <- ZIO.service[C]
-      groupName = config.groupName
-      _      <- log.info(s"Looking for Redis group $groupName")
-      exists <- RedisStream.listGroups[S].map(_.exists(_.getName == groupName.value))
-      res <- if (exists) log.info(s"Redis consumer group $groupName already created")
-            else {
-              log.info(s"Creating Redis consumer group $groupName") *>
-                RedisStream.createGroup[S](groupName, CreateGroupStrategy.Newest)
-            }
-    } yield res
+    ZIO.service[C].flatMap { config =>
+      val groupName = config.groupName
+      for {
+        _      <- log.info(s"Looking for Redis group $groupName")
+        exists <- RedisStream.listGroups[S].map(_.exists(_.getName == groupName.value))
+        res <- if (exists) log.info(s"Redis consumer group $groupName already created")
+              else {
+                log.info(s"Creating Redis consumer group $groupName") *>
+                  RedisStream.createGroup[S](groupName, CreateGroupStrategy.Newest)
+              }
+      } yield res
+    }
 
   private def getEvents[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     streamStatus: Ref[StreamSourceStatus]
@@ -82,10 +84,8 @@ object RedisZStream {
           RedisStream
             .readGroup[S](group, consumer, 10, Duration.fromScala(config.readTimeout), msgType)
             .map { events =>
-              //Process PENDING messages only once in case they keep failing
-              if (checkPending) {
-                events.filterNot(e => checkedMessages.contains(e.messageId))
-              } else events
+              if (checkPending) events.filterNot(e => checkedMessages.contains(e.messageId))
+              else events
             }
             .tap(result => log.info(s"Got ${result.size} $commonLogMsg").when(result.nonEmpty))
             .tapCause(c => log.error(s"Failed to consume $commonLogMsg", c))

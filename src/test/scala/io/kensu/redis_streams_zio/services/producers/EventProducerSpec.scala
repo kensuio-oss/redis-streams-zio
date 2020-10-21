@@ -7,7 +7,6 @@ import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
 import io.kensu.redis_streams_zio.redis.streams.StreamInstance
 import io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications
 import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
-import io.kensu.redis_streams_zio.specs.zio.CustomAssertions
 import org.redisson.api.StreamMessageId
 import zio.clock._
 import zio.duration._
@@ -19,7 +18,7 @@ import zio.test.environment.{ TestClock, TestEnvironment }
 import zio.test.mock.Expectation._
 import zio.{ Chunk, ULayer, ZLayer }
 
-object EventProducerSpec extends DefaultRunnableSpec with CustomAssertions {
+object EventProducerSpec extends DefaultRunnableSpec {
 
   import TestData._
 
