@@ -10,7 +10,7 @@ import zio._
 import zio.clock._
 import zio.duration.Duration
 import zio.logging._
-import zio.stream.{ Stream, ZStream }
+import zio.stream.ZStream
 
 object RedisZStream {
 
@@ -26,7 +26,9 @@ object RedisZStream {
   ): ZIO[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
       def setupStream(status: Ref[StreamSourceStatus]) =
-        asStream(getEvents(status))
+        ZStream
+          .fromEffect(getEvents(status))
+          .flattenChunks
           .via(eventsProcessor)
           .mapM(acknowledge[S, C])
           .repeat(repeatStrategy)
@@ -112,11 +114,6 @@ object RedisZStream {
             )
       } yield events
     }
-
-  private def asStream[R, E, A](messages: ZIO[R, E, Chunk[A]]): ZStream[R, E, A] =
-    ZStream
-      .fromEffect(messages)
-      .flatMap(events => Stream.fromChunk(events))
 
   private def acknowledge[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](msgId: Option[StreamMessageId]) =
     ZIO.service[C].flatMap { config =>
