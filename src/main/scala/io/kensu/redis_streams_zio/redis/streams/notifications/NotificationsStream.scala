@@ -1,29 +1,21 @@
 package io.kensu.redis_streams_zio.redis.streams.notifications
 
 import io.kensu.redis_streams_zio.common.RetryableStreamError
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
+import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
 import io.kensu.redis_streams_zio.redis.streams.dto.{ Event, IncorrectEvent, NotificationAddedEvent }
 import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupData, ReadGroupResult, RedisZStream, StreamInstance }
 import zio._
-import zio.clock.Clock
+import zio.config.{ getConfig, ZConfig }
 import zio.logging.LogAnnotation.Name
 import zio.logging._
 
 object NotificationsStream {
 
-  private type Input = Clock
-    with Logging
-    with Has[NotificationsStreamConsumerConfig]
-    with RedisStream[StreamInstance.Notifications]
-
-  def run(
-    shutdownHook: Promise[Throwable, Unit]
-  ): ZIO[Input, Throwable, Long] =
+  def run(shutdownHook: Promise[Throwable, Unit]) =
     log.locally(Name(List(getClass.getName))) {
       RedisZStream.executeFor[
-        Input,
-        Event,
-        StreamInstance.Notifications,
+        ZConfig[NotificationsStreamConsumerConfig],
+        StreamInstance.Notifications.type,
         NotificationsStreamConsumerConfig
       ](
         shutdownHook    = shutdownHook,
@@ -32,7 +24,7 @@ object NotificationsStream {
     }
 
   private def eventParser(rawResult: ReadGroupResult) =
-    ZIO.service[NotificationsStreamConsumerConfig].flatMap { config =>
+    getConfig[NotificationsStreamConsumerConfig].flatMap { config =>
       val msgId = rawResult.messageId
       val data  = rawResult.data
       ZIO
@@ -73,7 +65,7 @@ object NotificationsStream {
         })
   }
 
-  private def additionalWork(event: Event): Task[String] = event match {
+  private def additionalWork(event: Event) = event match {
     case IncorrectEvent(msgId) => Task(s"Nothing to do for event $msgId")
     case NotificationAddedEvent(msgId, payload) =>
       Task.effect(s"Effectfully processed add notification event $msgId with data $payload")

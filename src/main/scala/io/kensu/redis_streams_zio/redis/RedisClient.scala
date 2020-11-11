@@ -6,15 +6,16 @@ import org.redisson.api.{ RStream, RedissonClient }
 import org.redisson.client.codec.ByteArrayCodec
 import org.redisson.config.Config
 import zio._
+import zio.config.{ getConfig, ZConfig }
 
 object RedisClient {
 
   type RedisClient = Has[RedissonClient]
 
-  val live: ZLayer[RedisConfig, Throwable, RedisClient] =
+  val live: ZLayer[ZConfig[RedisConfig], Throwable, RedisClient] =
     ZLayer.fromManaged {
       ZManaged.make(
-        ZIO.environment[RedisConfig].map { config =>
+        getConfig[RedisConfig].map { config =>
           val redissonConfig = new Config()
           redissonConfig.setCodec(new ByteArrayCodec())
           redissonConfig

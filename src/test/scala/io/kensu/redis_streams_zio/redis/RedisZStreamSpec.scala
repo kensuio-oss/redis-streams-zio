@@ -10,6 +10,7 @@ import org.redisson.api.{ StreamGroup, StreamMessageId }
 import zio.Schedule.Decision
 import zio._
 import zio.clock.Clock
+import zio.duration.{ durationInt, Duration }
 import zio.logging.Logging
 import zio.test.Assertion._
 import zio.test.Eql.eqlReflexive
@@ -32,7 +33,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
                 repeatStrategy  = Schedule.recurs(0).unit
@@ -50,7 +51,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
                 repeatStrategy  = Schedule.recurs(0).unit
@@ -67,7 +68,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
               RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
                 repeatStrategy  = Schedule.recurs(0).unit
@@ -84,7 +85,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk.empty),
                 repeatStrategy  = Schedule.recurs(0).unit
@@ -106,7 +107,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
                 repeatStrategy  = Schedule.recurs(3).unit
@@ -124,7 +125,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData1, redisData2)))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
                 repeatStrategy  = Schedule.once
@@ -146,7 +147,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
                 repeatStrategy  = Schedule.recurs(3).unit
@@ -172,7 +173,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(eventsMapper).mapM(eventProcessor),
                 repeatStrategy  = Schedule.recurs(3).unit
@@ -193,12 +194,12 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             def stream(clock: TestClock.Service) =
               RedisZStream
-                .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+                .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
                   repeatStrategy = Schedule
                     .recurs(3)
-                    .onDecision(_ => clock.adjust(Duration.fromScala(config.checkPendingEvery).plusSeconds(1)))
+                    .onDecision(_ => clock.adjust(config.checkPendingEvery.plusSeconds(1)))
                     .unit
                 )
 
@@ -219,7 +220,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             val stream =
               RedisZStream
-                .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+                .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
                   repeatStrategy  = Schedule.recurs(0).unit
@@ -227,7 +228,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             (for {
               forked <- stream.fork
-              _      <- TestClock.adjust(Duration.fromScala(config.retry.min).plusSeconds(1))
+              _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             } yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -248,7 +249,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             val stream =
               RedisZStream
-                .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+                .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
                   repeatStrategy  = Schedule.recurs(0).unit
@@ -256,7 +257,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             (for {
               forked <- stream.fork
-              _      <- TestClock.adjust(Duration.fromScala(config.retry.min).plusSeconds(1))
+              _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             } yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -274,7 +275,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             val stream =
               RedisZStream
-                .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+                .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
                   repeatStrategy  = Schedule.recurs(0).unit
@@ -282,7 +283,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             (for {
               forked <- stream.fork
-              _      <- TestClock.adjust(Duration.fromScala(config.retry.min).plusSeconds(1))
+              _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             } yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -305,7 +306,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             val stream =
               RedisZStream
-                .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+                .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk(redisData)),
                   repeatStrategy  = Schedule.recurs(0).unit
@@ -313,7 +314,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
 
             (for {
               forked <- stream.fork
-              _      <- TestClock.adjust(Duration.fromScala(config.retry.min).plusSeconds(1))
+              _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             } yield assert(result)(equalTo(1L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -333,7 +334,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)).optional
 
             val stream = RedisZStream
-              .executeFor[Any, TestEvent, StreamInstance.Notifications, StreamConsumerConfig](
+              .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
                 repeatStrategy = Schedule.forever
@@ -359,12 +360,12 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
     ZIO.succeed(TestEvent(rawData.messageId, new String(rawData.data.head.payload.toArray, "UTF-8")))
 
   private def successfulEventProcessor(
-    stream: StreamInput[StreamInstance.Notifications, StreamConsumerConfig],
+    stream: StreamInput[StreamInstance.Notifications.type, StreamConsumerConfig],
     redisData: Chunk[ReadGroupResult]
   ) =
     stream.mapM(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
 
-  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
+  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications.type]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
   private[this] case class TestEvent(
@@ -373,8 +374,6 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
   )
 
   private object TestData {
-    import scala.concurrent.duration.{ DurationInt, FiniteDuration }
-
     val config = new StreamConsumerConfig {
       override val claiming: ClaimingConfig = ClaimingConfig(
         initialDelay      = 5.seconds,
@@ -387,11 +386,11 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
         max    = 1.minute,
         factor = 2
       )
-      override val readTimeout: FiniteDuration       = 20.seconds
-      override val checkPendingEvery: FiniteDuration = 5.minutes
-      override val streamName: StreamName            = StreamName("test-stream")
-      override val groupName: StreamGroupName        = StreamGroupName("test-stream-group-name")
-      override val consumerName: StreamConsumerName  = StreamConsumerName("test-stream-consumer-name")
+      override val readTimeout: Duration            = 20.seconds
+      override val checkPendingEvery: Duration      = 5.minutes
+      override val streamName: StreamName           = StreamName("test-stream")
+      override val groupName: StreamGroupName       = StreamGroupName("test-stream-group-name")
+      override val consumerName: StreamConsumerName = StreamConsumerName("test-stream-consumer-name")
     }
 
     val streamKey = StreamKey("test-event-key")
@@ -401,7 +400,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
         config.groupName,
         config.consumerName,
         10,
-        zio.duration.Duration.fromScala(config.readTimeout),
+        config.readTimeout,
         ListGroupStrategy.Pending
       )
     val newReadGroupCorrectArgs =
@@ -409,7 +408,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
         config.groupName,
         config.consumerName,
         10,
-        zio.duration.Duration.fromScala(config.readTimeout),
+        config.readTimeout,
         ListGroupStrategy.New
       )
   }

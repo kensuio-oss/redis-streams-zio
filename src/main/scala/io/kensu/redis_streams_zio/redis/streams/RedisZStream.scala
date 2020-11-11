@@ -8,22 +8,22 @@ import io.kensu.redis_streams_zio.redis.streams.RedisStream.{ CreateGroupStrateg
 import org.redisson.api.StreamMessageId
 import zio._
 import zio.clock._
-import zio.duration.Duration
+import zio.config.{ getConfig, ZConfig }
 import zio.logging._
 import zio.stream.ZStream
 
 object RedisZStream {
 
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[RedisStream[S] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
+    ZStream[RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, ReadGroupResult]
   type StreamOutput[R, S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
+    ZStream[R with RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
 
-  def executeFor[R, A, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  def executeFor[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     shutdownHook: Promise[Throwable, Unit],
     eventsProcessor: StreamInput[S, C] => StreamOutput[R, S, C],
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
-  ): ZIO[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
+  ): ZIO[R with RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
       def setupStream(status: Ref[StreamSourceStatus]) =
         ZStream
@@ -56,7 +56,7 @@ object RedisZStream {
       )
 
   private def assureStreamGroup[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag] =
-    ZIO.service[C].flatMap { config =>
+    getConfig[C].flatMap { config =>
       val groupName = config.groupName
       for {
         _      <- log.info(s"Looking for Redis group $groupName")
@@ -72,7 +72,7 @@ object RedisZStream {
   private def getEvents[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     streamStatus: Ref[StreamSourceStatus]
   ) =
-    ZIO.service[C].flatMap { config =>
+    getConfig[C].flatMap { config =>
       val group    = config.groupName
       val consumer = config.consumerName
 
@@ -84,7 +84,7 @@ object RedisZStream {
 
         log.debug(s"Attempt to check $commonLogMsg") *>
           RedisStream
-            .readGroup[S](group, consumer, 10, Duration.fromScala(config.readTimeout), msgType)
+            .readGroup[S](group, consumer, 10, config.readTimeout, msgType)
             .map { events =>
               if (checkPending) events.filterNot(e => checkedMessages.contains(e.messageId))
               else events
@@ -95,7 +95,7 @@ object RedisZStream {
 
       def shouldCheckPending(status: StreamSourceStatus, currentInstant: Instant) =
         status.keepPending || status.lastPendingAttempt
-          .plusSeconds(config.checkPendingEvery.toSeconds)
+          .plusMillis(config.checkPendingEvery.toMillis)
           .isBefore(currentInstant)
 
       for {
@@ -116,7 +116,7 @@ object RedisZStream {
     }
 
   private def acknowledge[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](msgId: Option[StreamMessageId]) =
-    ZIO.service[C].flatMap { config =>
+    getConfig[C].flatMap { config =>
       val commonLogMsg = s"for group ${config.groupName} and consumer ${config.consumerName}"
       msgId match {
         case Some(redisId) =>

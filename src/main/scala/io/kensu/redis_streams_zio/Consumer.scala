@@ -1,18 +1,13 @@
 package io.kensu.redis_streams_zio
 
-import io.kensu.redis_streams_zio.config.{ RedisConfig, StreamName }
+import io.kensu.redis_streams_zio.config.Configs
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
-import io.kensu.redis_streams_zio.redis.streams.notifications.{
-  NotificationsStream,
-  NotificationsStreamCollector,
-  NotificationsStreamConsumerConfig
-}
+import io.kensu.redis_streams_zio.redis.streams.notifications.{ NotificationsStream, NotificationsStreamCollector }
 import io.kensu.redis_streams_zio.redis.streams.{ RedisStream, StreamInstance }
-import pureconfig.generic.auto._
-import pureconfig.{ ConfigObjectSource, ConfigSource }
 import zio._
 import zio.clock.Clock
+import zio.config.syntax._
 import zio.duration._
 import zio.logging._
 import zio.logging.slf4j.Slf4jLogger
@@ -49,28 +44,20 @@ object Consumer extends App {
     } yield fork
 
   private val liveEnv = {
-    val config: ConfigObjectSource = ConfigSource.default
+    val rootConfig = Configs.loadOrFail
 
     val logging: ULayer[Logging] = Slf4jLogger.makeWithAnnotationsAsMdc(
       mdcAnnotations = List(KensuLogAnnotation.CorrelationId),
       logFormat      = (_, msg) => msg
     ) >>> Logging.modifyLogger(_.derive(KensuLogAnnotation.InitialLogContext))
 
-    val redisClient = ZLayer.succeedMany(config.at("kensu.redis").loadOrThrow[RedisConfig]) >>> RedisClient.live
+    val redisClient = rootConfig.narrow(_.kensu.redis) >>> RedisClient.live
+
+    val notificationsStream =
+      redisClient >>> RedisStream.buildFor(StreamInstance.Notifications)
 
     val clock = ZLayer.identity[Clock]
 
-    val notificationsConsumerConfig =
-      config.at("kensu.redis-streams.consumers.notifications").loadOrThrow[NotificationsStreamConsumerConfig]
-
-    val notificationsStream = {
-      notificationsConsumerConfig.streamName match {
-        case s @ StreamName("notifications") =>
-          redisClient >>> RedisStream.buildFor(StreamInstance.Notifications(s))
-        case s => ZLayer.fail(new IllegalStateException(s"Unsupported stream $s"))
-      }
-    }
-
-    clock ++ logging ++ ZLayer.succeed(notificationsConsumerConfig) ++ notificationsStream
+    clock ++ logging ++ rootConfig.narrow(_.kensu.redisStreams.consumers.notifications) ++ notificationsStream
   }
 }

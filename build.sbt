@@ -4,7 +4,7 @@ import Dependencies._
 lazy val root =
   (project in file(".")).commonSettings.scalafmtSettings
     .settings(
-      libraryDependencies ++= zio ++ logback ++ pureconfig ++ redisson
+      libraryDependencies ++= zio ++ logback ++ redisson
     )
 
 addCommandAlias("fmt", "; scalafmt; scalafmtSbt; test:scalafmt")

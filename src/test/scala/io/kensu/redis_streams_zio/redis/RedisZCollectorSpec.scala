@@ -7,6 +7,7 @@ import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
 import org.redisson.api.{ PendingEntry, StreamMessageId }
 import zio._
 import zio.clock.Clock
+import zio.duration.{ durationInt, Duration }
 import zio.logging.Logging
 import zio.test.Assertion._
 import zio.test.environment.{ TestClock, TestEnvironment }
@@ -23,10 +24,10 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
       testM("does not begin processing before initial delay") {
         val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty)).atMost(0)
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
+        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
         (for {
           forked <- collector.fork
-          _      <- TestClock.adjust(Duration.fromScala(config.claiming.initialDelay).minusMillis(1))
+          _      <- TestClock.adjust(config.claiming.initialDelay.minusMillis(1))
           _      <- forked.interrupt
         } yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -34,11 +35,11 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
       testM("begin processing after initial delay") {
         val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty))
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
+        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
-          _      <- TestClock.adjust(Duration.fromScala(config.claiming.initialDelay))
+          _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         } yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -67,17 +68,17 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               equalTo(
                 config.groupName,
                 config.consumerName,
-                Duration.fromScala(config.claiming.maxIdleTime),
+                config.claiming.maxIdleTime,
                 NonEmptyChunk(otherConsumerExceededIdleTimeEntry.getId)
               ),
               value(Chunk(otherConsumerExceededIdleTimeEntry.getId))
             )
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
+        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
-          _      <- TestClock.adjust(Duration.fromScala(config.claiming.initialDelay))
+          _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         } yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -105,17 +106,17 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               equalTo(
                 config.groupName,
                 config.consumerName,
-                Duration.fromScala(config.claiming.maxIdleTime),
+                config.claiming.maxIdleTime,
                 NonEmptyChunk(exceededIdleTimeEntry1.getId)
               ),
               value(Chunk(exceededIdleTimeEntry1.getId))
             )
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
+        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
-          _      <- TestClock.adjust(Duration.fromScala(config.claiming.initialDelay))
+          _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         } yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -143,7 +144,7 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               equalTo(
                 config.groupName,
                 config.consumerName,
-                Duration.fromScala(config.claiming.maxIdleTime),
+                config.claiming.maxIdleTime,
                 NonEmptyChunk(exceededIdleTimeEntry1.getId)
               ),
               value(Chunk(exceededIdleTimeEntry1.getId))
@@ -156,18 +157,18 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               equalTo(
                 config.groupName,
                 config.consumerName,
-                Duration.fromScala(config.claiming.maxIdleTime),
+                config.claiming.maxIdleTime,
                 NonEmptyChunk(exceededIdleTimeEntry1.getId)
               ),
               value(Chunk(exceededIdleTimeEntry1.getId))
             )
 
         val collector =
-          RedisZCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig](Some(Schedule.once))
+          RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig](Some(Schedule.once))
 
         (for {
           forked <- collector.fork
-          _      <- TestClock.adjust(Duration.fromScala(config.claiming.initialDelay))
+          _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.join
         } yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -200,11 +201,11 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               value(2)
             )
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
+        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
-          _      <- TestClock.adjust(Duration.fromScala(config.claiming.initialDelay))
+          _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         } yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -244,11 +245,11 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               .Ack(equalTo(config.groupName, NonEmptyChunk(otherConsumerExceededIdleTimeEntry.getId)), value(1))
 
         val collector = RedisZCollector
-          .executeFor[StreamInstance.Notifications, StreamConsumerConfig](Some(Schedule.once))
+          .executeFor[StreamInstance.Notifications.type, StreamConsumerConfig](Some(Schedule.once))
 
         (for {
           forked <- collector.fork
-          _      <- TestClock.adjust(Duration.fromScala(config.claiming.initialDelay))
+          _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.join
         } yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
@@ -256,12 +257,10 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
     ) @@ TestAspect.timeout(30.seconds)
   }
 
-  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
+  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications.type]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
   private object TestData {
-
-    import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 
     val config = new StreamConsumerConfig {
       override val claiming: ClaimingConfig = ClaimingConfig(
@@ -275,11 +274,11 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
         max    = 1.minute,
         factor = 2
       )
-      override val readTimeout: FiniteDuration       = 20.seconds
-      override val checkPendingEvery: FiniteDuration = 5.minutes
-      override val streamName: StreamName            = StreamName("test-stream")
-      override val groupName: StreamGroupName        = StreamGroupName("test-stream-group-name")
-      override val consumerName: StreamConsumerName  = StreamConsumerName("test-stream-consumer-name")
+      override val readTimeout: Duration            = 20.seconds
+      override val checkPendingEvery: Duration      = 5.minutes
+      override val streamName: StreamName           = StreamName("test-stream")
+      override val groupName: StreamGroupName       = StreamGroupName("test-stream-group-name")
+      override val consumerName: StreamConsumerName = StreamConsumerName("test-stream-consumer-name")
     }
   }
 }

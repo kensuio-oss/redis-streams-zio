@@ -6,7 +6,7 @@ import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
 import org.redisson.api.StreamMessageId
 import zio._
 import zio.clock.Clock
-import zio.duration._
+import zio.config.{ getConfig, ZConfig }
 import zio.logging._
 
 object RedisZCollector {
@@ -18,21 +18,21 @@ object RedisZCollector {
     */
   def executeFor[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     repeatStrategy: Option[Schedule[Any, Any, Unit]] = None
-  ): ZIO[RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
-    ZIO.service[C].flatMap { config =>
+  ): ZIO[RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, Long] =
+    getConfig[C].flatMap { config =>
       getPendingEvents
         .repeat(
           repeatStrategy
-            .getOrElse(Schedule.fixed(Duration.fromScala(config.claiming.repeatEvery))) *> Schedule.collectAll
+            .getOrElse(Schedule.fixed(config.claiming.repeatEvery)) *> Schedule.collectAll
         )
-        .delay(Duration.fromScala(config.claiming.initialDelay))
+        .delay(config.claiming.initialDelay)
         .tapCause(t => log.error(s"Failed claiming process for ${config.streamName} stream, will be retried", t))
         .retry(Scheduling.exponentialBackoff(config.retry.min, config.retry.max, config.retry.factor))
         .map(_.sum)
     }
 
   private def getPendingEvents[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag] =
-    ZIO.service[C].flatMap { config =>
+    getConfig[C].flatMap { config =>
       val group    = config.groupName
       val consumer = config.consumerName
       log.debug(s"Listing pending messages for group $group and consumer $consumer") *>
@@ -55,7 +55,7 @@ object RedisZCollector {
   private def acknowledge[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     messageIds: Chunk[StreamMessageId]
   ) =
-    ZIO.service[C].flatMap { config =>
+    getConfig[C].flatMap { config =>
       val group        = config.groupName
       val batchSize    = messageIds.size
       val commonLogMsg = s"batch of $batchSize messages for group $group"
@@ -75,7 +75,7 @@ object RedisZCollector {
   private def claim[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     messageIds: Chunk[StreamMessageId]
   ) =
-    ZIO.service[C].flatMap { config =>
+    getConfig[C].flatMap { config =>
       val group        = config.groupName
       val consumer     = config.consumerName
       val batchSize    = messageIds.size
@@ -85,7 +85,7 @@ object RedisZCollector {
         case Some(ids) =>
           log.debug(s"Attempt to claim batch of $batchSize messages $commonLogMsg $ids") *>
             RedisStream
-              .fastClaim[S](group, consumer, Duration.fromScala(config.claiming.maxIdleTime), ids)
+              .fastClaim[S](group, consumer, config.claiming.maxIdleTime, ids)
               .map(_.size.toLong)
               .tapBoth(
                 t => log.throwable(s"Failed to claim $commonLogMsg (maybe an attempt to claim the same resource)", t),

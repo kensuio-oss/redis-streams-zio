@@ -22,10 +22,8 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
   import TestData._
 
-  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore >>> EventProducer.redisFor(
-      Notifications(testStreamName)
-    )
+  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications.type]]) =
+    redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore >>> EventProducer.redisFor(Notifications)
 
   override def spec: ZSpec[TestEnvironment, Failure] =
     suite("EventProducer.redis")(
@@ -39,10 +37,13 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
           (for {
             timeBefore <- currentTime(TimeUnit.SECONDS)
-            forked     <- EventProducer.publish[StreamInstance.Notifications, TestEvent](testStreamKey, testEvent).run.fork
-            _          <- TestClock.adjust(21.seconds) //3 retries for 3 sec exponential * 2
-            msg        <- forked.join
-            timeAfter  <- currentTime(TimeUnit.SECONDS)
+            forked <- EventProducer
+                       .publish[StreamInstance.Notifications.type, TestEvent](testStreamKey, testEvent)
+                       .run
+                       .fork
+            _         <- TestClock.adjust(21.seconds) //3 retries for 3 sec exponential * 2
+            msg       <- forked.join
+            timeAfter <- currentTime(TimeUnit.SECONDS)
           } yield {
             assert(msg)(fails(isSubtype[RuntimeException](anything))) &&
             assert(timeAfter - timeBefore)(isGreaterThanEqualTo(21L))
@@ -53,7 +54,7 @@ object EventProducerSpec extends DefaultRunnableSpec {
             RedisStreamMock.Add(equalTo(testStreamKey, testEventBytes), value(new StreamMessageId(123L, 456L)))
 
           EventProducer
-            .publish[StreamInstance.Notifications, TestEvent](testStreamKey, testEvent)
+            .publish[StreamInstance.Notifications.type, TestEvent](testStreamKey, testEvent)
             .map(createdMsgId => assert(createdMsgId)(equalTo(PublishedEventId("123-456"))))
             .provideCustomLayer(testEnv(redisStreamMock))
         }
