@@ -30,21 +30,39 @@ object Producer extends App {
     } yield ()
 
   private val liveEnv = {
-    val rootConfig     = Configs.loadOrFail
-    val producerConfig = rootConfig.narrow(_.kensu.redisStreams.producers.notifications)
+    val appConfig      = Configs.appConfig
+    val producerConfig = appConfig.narrow(_.redisStreams.producers.notifications)
 
     val logging: ULayer[Logging] = Slf4jLogger.makeWithAnnotationsAsMdc(
       mdcAnnotations = List(KensuLogAnnotation.CorrelationId),
       logFormat      = (_, msg) => msg
     ) >>> Logging.modifyLogger(_.derive(KensuLogAnnotation.InitialLogContext))
 
-    val redisClient = rootConfig.narrow(_.kensu.redis) >>> RedisClient.live
+    val redisClient = appConfig.narrow(_.redis) >>> RedisClient.live
 
     val clock = ZLayer.identity[Clock]
 
     val notificationsStream = {
-      val redisStream = (redisClient >>> RedisStream.buildFor(StreamInstance.Notifications))
-      (redisStream ++ clock ++ logging) >>> EventProducer.redisFor(StreamInstance.Notifications)
+      val notificationsStream = StreamInstance.Notifications
+      val redisStream = {
+        appConfig
+          .narrow(_.redisStreams.producers)
+          .map { hasProducers =>
+            hasProducers.get.notifications.streamName match {
+              case notificationsStream.name => ()
+              case s                        => throw new IllegalStateException(s"Unsupported stream $s")
+            }
+          }
+          .build
+          .zipRight {
+            val stream = redisClient >>> RedisStream.buildFor(notificationsStream)
+            stream.build
+          }
+          .toLayerMany
+      }
+
+//      val redisStream = (redisClient >>> RedisStream.buildFor(StreamInstance.Notifications))
+      (redisStream ++ clock ++ logging) >>> EventProducer.redisFor(notificationsStream)
     }
 
     clock ++ logging ++ producerConfig ++ notificationsStream

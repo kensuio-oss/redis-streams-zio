@@ -1,17 +1,16 @@
 package io.kensu.redis_streams_zio.config
 
-import io.kensu.redis_streams_zio.redis.streams.StreamInstance
-import zio.ZLayer
+import zio.{ Has, Layer }
 import zio.config.magnolia.DeriveConfigDescriptor.{ descriptor, Descriptor }
-import zio.config.read
-import zio.config.typesafe.TypesafeConfigSource
+import zio.config.ReadError
+import zio.config.typesafe.TypesafeConfig
 import zio.duration.Duration
 
 final case class RootConfig(
-  kensu: KensuConfig
+  kensu: AppConfig
 )
 
-final case class KensuConfig(
+final case class AppConfig(
   redis: RedisConfig,
   redisStreams: RedisStreamsConfig
 )
@@ -110,20 +109,8 @@ final case class NotificationsStreamProducerConfig(
 ) extends StreamProducerConfig
 
 object Configs {
+  import zio.config.syntax._
 
-  val loadOrFail = {
-    (for {
-      aHoconSource <- TypesafeConfigSource.fromDefaultLoader
-      config       <- read(descriptor[RootConfig] from aHoconSource)
-    } yield config) match {
-      case Left(value) =>
-        ZLayer.fail(value.prettyPrint())
-      case Right(config) =>
-        config.kensu.redisStreams.consumers.notifications.streamName match {
-          case s if s == StreamInstance.Notifications.name =>
-            ZLayer.succeed(config)
-          case s => ZLayer.fail(s"Unsupported stream $s")
-        }
-    }
-  }
+  val appConfig: Layer[ReadError[String], Has[AppConfig]] =
+    TypesafeConfig.fromDefaultLoader(descriptor[RootConfig]).narrow(_.kensu)
 }

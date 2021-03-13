@@ -2,21 +2,20 @@ package io.kensu.redis_streams_zio.services.producers
 
 import java.util.concurrent.TimeUnit
 
-import io.kensu.redis_streams_zio.config.{ StreamKey, StreamName }
+import io.kensu.redis_streams_zio.config.StreamKey
 import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
 import io.kensu.redis_streams_zio.redis.streams.StreamInstance
 import io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications
 import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
 import org.redisson.api.StreamMessageId
+import zio.{ Chunk, ULayer, ZLayer }
 import zio.clock._
 import zio.duration._
 import zio.logging.Logging
-import zio.test.Assertion._
-import zio.test.Eql.eqlReflexive
 import zio.test._
+import zio.test.Assertion._
 import zio.test.environment.{ TestClock, TestEnvironment }
 import zio.test.mock.Expectation._
-import zio.{ Chunk, ULayer, ZLayer }
 
 object EventProducerSpec extends DefaultRunnableSpec {
 
@@ -63,7 +62,6 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
   private object TestData {
 
-    val testStreamName = StreamName("test-stream")
     val testStreamKey  = StreamKey("create")
     val testEvent      = TestEvent("Important delivery!")
     val testEventBytes = Chunk.fromArray(testEvent.asBytes)

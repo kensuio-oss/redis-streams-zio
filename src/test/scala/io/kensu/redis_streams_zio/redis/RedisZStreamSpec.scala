@@ -13,7 +13,6 @@ import zio.clock.Clock
 import zio.duration.{ durationInt, Duration }
 import zio.logging.Logging
 import zio.test.Assertion._
-import zio.test.Eql.eqlReflexive
 import zio.test._
 import zio.test.environment.{ TestClock, TestEnvironment }
 import zio.test.mock.Expectation._

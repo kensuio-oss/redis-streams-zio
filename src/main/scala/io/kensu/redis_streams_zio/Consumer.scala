@@ -3,8 +3,8 @@ package io.kensu.redis_streams_zio
 import io.kensu.redis_streams_zio.config.Configs
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
-import io.kensu.redis_streams_zio.redis.streams.notifications.{ NotificationsStream, NotificationsStreamCollector }
 import io.kensu.redis_streams_zio.redis.streams.{ RedisStream, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.notifications.{ NotificationsStream, NotificationsStreamCollector }
 import zio._
 import zio.clock.Clock
 import zio.config.syntax._
@@ -20,7 +20,7 @@ object Consumer extends App {
       .exitCode
 
   private val streams =
-    ZManaged.make {
+    ZManaged.makeInterruptible {
       for {
         shutdownHook            <- Promise.make[Throwable, Unit]
         notificationStreamFiber <- notificationsStream(shutdownHook)
@@ -39,25 +39,40 @@ object Consumer extends App {
 
   private def notificationsStream(shutdownHook: Promise[Throwable, Unit]) =
     for {
-      fork <- NotificationsStream.run(shutdownHook).interruptible.fork
-      _    <- NotificationsStreamCollector.run().interruptible.fork
+      fork <- NotificationsStream.run(shutdownHook).fork
+      _    <- NotificationsStreamCollector.run().fork
     } yield fork
 
   private val liveEnv = {
-    val rootConfig = Configs.loadOrFail
+    val appConfig = Configs.appConfig
 
     val logging: ULayer[Logging] = Slf4jLogger.makeWithAnnotationsAsMdc(
       mdcAnnotations = List(KensuLogAnnotation.CorrelationId),
       logFormat      = (_, msg) => msg
     ) >>> Logging.modifyLogger(_.derive(KensuLogAnnotation.InitialLogContext))
 
-    val redisClient = rootConfig.narrow(_.kensu.redis) >>> RedisClient.live
+    val redisClient = appConfig.narrow(_.redis) >>> RedisClient.live
 
-    val notificationsStream =
-      redisClient >>> RedisStream.buildFor(StreamInstance.Notifications)
+    val notificationsStream = {
+      val notificationsStream = StreamInstance.Notifications
+      appConfig
+        .narrow(_.redisStreams.consumers)
+        .map { hasConsumers =>
+          hasConsumers.get.notifications.streamName match {
+            case notificationsStream.name => ()
+            case s                        => throw new IllegalStateException(s"Unsupported stream $s")
+          }
+        }
+        .build
+        .zipRight {
+          val stream = redisClient >>> RedisStream.buildFor(notificationsStream)
+          stream.build
+        }
+        .toLayerMany
+    }
 
     val clock = ZLayer.identity[Clock]
 
-    clock ++ logging ++ rootConfig.narrow(_.kensu.redisStreams.consumers.notifications) ++ notificationsStream
+    clock ++ logging ++ appConfig.narrow(_.redisStreams.consumers.notifications) ++ notificationsStream
   }
 }

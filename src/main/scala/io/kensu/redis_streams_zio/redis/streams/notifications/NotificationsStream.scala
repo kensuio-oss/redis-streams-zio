@@ -5,7 +5,7 @@ import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
 import io.kensu.redis_streams_zio.redis.streams.dto.{ Event, IncorrectEvent, NotificationAddedEvent }
 import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupData, ReadGroupResult, RedisZStream, StreamInstance }
 import zio._
-import zio.config.{ getConfig, ZConfig }
+import zio.config.getConfig
 import zio.logging.LogAnnotation.Name
 import zio.logging._
 
@@ -14,7 +14,7 @@ object NotificationsStream {
   def run(shutdownHook: Promise[Throwable, Unit]) =
     log.locally(Name(List(getClass.getName))) {
       RedisZStream.executeFor[
-        ZConfig[NotificationsStreamConsumerConfig],
+        Has[NotificationsStreamConsumerConfig],
         StreamInstance.Notifications.type,
         NotificationsStreamConsumerConfig
       ](

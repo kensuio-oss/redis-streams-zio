@@ -8,22 +8,22 @@ import io.kensu.redis_streams_zio.redis.streams.RedisStream.{ CreateGroupStrateg
 import org.redisson.api.StreamMessageId
 import zio._
 import zio.clock._
-import zio.config.{ getConfig, ZConfig }
+import zio.config.getConfig
 import zio.logging._
 import zio.stream.ZStream
 
 object RedisZStream {
 
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, ReadGroupResult]
+    ZStream[RedisStream[S] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
   type StreamOutput[R, S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[R with RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
+    ZStream[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
 
   def executeFor[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     shutdownHook: Promise[Throwable, Unit],
     eventsProcessor: StreamInput[S, C] => StreamOutput[R, S, C],
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
-  ): ZIO[R with RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, Long] =
+  ): ZIO[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
       def setupStream(status: Ref[StreamSourceStatus]) =
         ZStream

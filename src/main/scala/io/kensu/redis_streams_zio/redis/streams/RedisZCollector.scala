@@ -6,7 +6,7 @@ import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
 import org.redisson.api.StreamMessageId
 import zio._
 import zio.clock.Clock
-import zio.config.{ getConfig, ZConfig }
+import zio.config.getConfig
 import zio.logging._
 
 object RedisZCollector {
@@ -18,7 +18,7 @@ object RedisZCollector {
     */
   def executeFor[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     repeatStrategy: Option[Schedule[Any, Any, Unit]] = None
-  ): ZIO[RedisStream[S] with ZConfig[C] with Logging with Clock, Throwable, Long] =
+  ): ZIO[RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
     getConfig[C].flatMap { config =>
       getPendingEvents
         .repeat(

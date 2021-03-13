@@ -1,6 +1,6 @@
 # redis-streams-zio
 
-The Redis Stream consumer and producer implementation with ZIO-Streams.
+The Redis Stream consumer and producer implementation with ZIO-Streams. Targets Java 11.
 
 Prerequisites
 
@@ -26,10 +26,10 @@ The project is configured to work over `notifications` stream.
 
 ### Producer
 
-You can run a sample event producer of notifications with `sbt runMain io.kensu.redis_streams_zio.Producer`.
+You can run a sample event producer of notifications with `sbt 'runMain io.kensu.redis_streams_zio.Producer'`.
 This will produce a random String event to the `notifications` stream, under `add` key every ~5 seconds.
 
 ### Consumer
 
-You can run a sample event producer of notifications with `sbt runMain io.kensu.redis_streams_zio.Consumer`.
+You can run a sample event producer of notifications with `sbt 'runMain io.kensu.redis_streams_zio.Consumer'`.
 This will keep consuming the `notifications` stream from `add` key, ignoring events under different keys with logged info about that.

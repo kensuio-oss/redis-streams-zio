@@ -6,3 +6,4 @@ target
 *.log
 docker/docker-volumes
 .bsp
+.sdkmanrc

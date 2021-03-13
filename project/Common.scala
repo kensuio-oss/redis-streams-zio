@@ -15,8 +15,8 @@ object Common {
     "-language:postfixOps",
     "-Ymacro-annotations",
     "-Wdead-code",
-    "-Werror",
-    "-Wunused",
+//    "-Werror",
+//    "-Wunused",
     "-Wnumeric-widen",
     "-Xlint:-infer-any"
   )
@@ -28,12 +28,12 @@ object Common {
         .settings(
           organization := "io.kensu",
           name := "redis-streams-zio",
-          scalaVersion := "2.13.3",
+          scalaVersion := "2.13.5",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
           scalacOptions in (Compile, console) --= Seq("-Wunused:imports", "-Werror"),
-          scalacOptions ++= Seq("-target:jvm-1.8"),
-          javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
+          scalacOptions ++= Seq("-target:11", "--release", "11"),
+          javacOptions ++= Seq("--release", "11"),
           cancelable in Global := true,
           parallelExecution in Test := true,
           fork := true,
