@@ -3,17 +3,17 @@ package io.kensu.redis_streams_zio.redis.streams.notifications
 import io.kensu.redis_streams_zio.common.RetryableStreamError
 import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
 import io.kensu.redis_streams_zio.redis.streams.dto.{ Event, IncorrectEvent, NotificationAddedEvent }
-import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupData, ReadGroupResult, RedisZStream, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupData, ReadGroupResult, RedisConsumer, StreamInstance }
 import zio._
 import zio.config.getConfig
 import zio.logging.LogAnnotation.Name
 import zio.logging._
 
-object NotificationsStream {
+object NotificationsConsumer {
 
   def run(shutdownHook: Promise[Throwable, Unit]) =
     log.locally(Name(List(getClass.getName))) {
-      RedisZStream.executeFor[
+      RedisConsumer.executeFor[
         Has[NotificationsStreamConsumerConfig],
         StreamInstance.Notifications.type,
         NotificationsStreamConsumerConfig

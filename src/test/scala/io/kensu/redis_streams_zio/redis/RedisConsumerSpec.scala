@@ -3,8 +3,8 @@ package io.kensu.redis_streams_zio.redis
 import io.kensu.redis_streams_zio.config._
 import io.kensu.redis_streams_zio.redis.PropertyGenerators.{ redisData, _ }
 import io.kensu.redis_streams_zio.redis.streams.RedisStream.{ CreateGroupStrategy, ListGroupStrategy, RedisStream }
-import io.kensu.redis_streams_zio.redis.streams.RedisZStream.StreamInput
-import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupResult, RedisZStream, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.RedisConsumer.StreamInput
+import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupResult, RedisConsumer, StreamInstance }
 import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
 import org.redisson.api.{ StreamGroup, StreamMessageId }
 import zio.Schedule.Decision
@@ -17,7 +17,7 @@ import zio.test._
 import zio.test.environment.{ TestClock, TestEnvironment }
 import zio.test.mock.Expectation._
 
-object RedisZStreamSpec extends DefaultRunnableSpec {
+object RedisConsumerSpec extends DefaultRunnableSpec {
 
   import TestData._
 
@@ -31,7 +31,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
               RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
@@ -49,7 +49,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.CreateGroup(equalTo((config.groupName, CreateGroupStrategy.Newest)), unit) ++
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
@@ -66,7 +66,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
               RedisStreamMock.CreateGroup(equalTo((config.groupName, CreateGroupStrategy.Newest)), unit) ++
               RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
@@ -83,7 +83,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
               RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk.empty),
@@ -105,7 +105,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
                 RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
@@ -123,7 +123,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData1, redisData2))) ++
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData1, redisData2)))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(_ => ZIO.none),
@@ -145,7 +145,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))), value(1)) ++
                 RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
@@ -171,7 +171,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))), value(1)) ++
                 RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
-            RedisZStream
+            RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = _.mapM(eventsMapper).mapM(eventProcessor),
@@ -192,7 +192,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             def stream(clock: TestClock.Service) =
-              RedisZStream
+              RedisConsumer
                 .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
@@ -218,7 +218,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             val stream =
-              RedisZStream
+              RedisConsumer
                 .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
@@ -247,7 +247,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             val stream =
-              RedisZStream
+              RedisConsumer
                 .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
@@ -273,7 +273,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             val stream =
-              RedisZStream
+              RedisConsumer
                 .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
@@ -304,7 +304,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                 RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData.messageId))), value(1))
 
             val stream =
-              RedisZStream
+              RedisConsumer
                 .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk(redisData)),
@@ -332,7 +332,7 @@ object RedisZStreamSpec extends DefaultRunnableSpec {
                   .optional ++
                 RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)).optional
 
-            val stream = RedisZStream
+            val stream = RedisConsumer
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),

@@ -4,7 +4,10 @@ import io.kensu.redis_streams_zio.config.Configs
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
 import io.kensu.redis_streams_zio.redis.streams.{ RedisStream, StreamInstance }
-import io.kensu.redis_streams_zio.redis.streams.notifications.{ NotificationsStream, NotificationsStreamCollector }
+import io.kensu.redis_streams_zio.redis.streams.notifications.{
+  NotificationsConsumer,
+  NotificationsStaleEventsCollector
+}
 import zio._
 import zio.clock.Clock
 import zio.config.syntax._
@@ -39,8 +42,8 @@ object Consumer extends App {
 
   private def notificationsStream(shutdownHook: Promise[Throwable, Unit]) =
     for {
-      fork <- NotificationsStream.run(shutdownHook).fork
-      _    <- NotificationsStreamCollector.run().fork
+      fork <- NotificationsConsumer.run(shutdownHook).fork
+      _    <- NotificationsStaleEventsCollector.run().fork
     } yield fork
 
   private val liveEnv = {

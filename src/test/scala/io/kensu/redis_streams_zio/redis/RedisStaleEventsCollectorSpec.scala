@@ -2,7 +2,7 @@ package io.kensu.redis_streams_zio.redis
 
 import io.kensu.redis_streams_zio.config._
 import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
-import io.kensu.redis_streams_zio.redis.streams.{ RedisZCollector, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.{ RedisStaleEventsCollector, StreamInstance }
 import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
 import org.redisson.api.{ PendingEntry, StreamMessageId }
 import zio._
@@ -14,7 +14,7 @@ import zio.test.environment.{ TestClock, TestEnvironment }
 import zio.test.mock.Expectation._
 import zio.test.{ DefaultRunnableSpec, _ }
 
-object RedisZCollectorSpec extends DefaultRunnableSpec {
+object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
   import TestData._
 
@@ -24,7 +24,7 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
       testM("does not begin processing before initial delay") {
         val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty)).atMost(0)
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
         (for {
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay.minusMillis(1))
@@ -35,7 +35,7 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
       testM("begin processing after initial delay") {
         val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty))
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -74,7 +74,7 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               value(Chunk(otherConsumerExceededIdleTimeEntry.getId))
             )
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -112,7 +112,7 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               value(Chunk(exceededIdleTimeEntry1.getId))
             )
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -164,7 +164,9 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
             )
 
         val collector =
-          RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig](Some(Schedule.once))
+          RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig](
+            Some(Schedule.once)
+          )
 
         (for {
           forked <- collector.fork
@@ -201,7 +203,7 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
               value(2)
             )
 
-        val collector = RedisZCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -244,7 +246,7 @@ object RedisZCollectorSpec extends DefaultRunnableSpec {
             RedisStreamMock
               .Ack(equalTo(config.groupName, NonEmptyChunk(otherConsumerExceededIdleTimeEntry.getId)), value(1))
 
-        val collector = RedisZCollector
+        val collector = RedisStaleEventsCollector
           .executeFor[StreamInstance.Notifications.type, StreamConsumerConfig](Some(Schedule.once))
 
         (for {

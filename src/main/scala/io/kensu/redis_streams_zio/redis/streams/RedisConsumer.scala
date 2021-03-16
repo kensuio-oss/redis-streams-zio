@@ -12,7 +12,7 @@ import zio.config.getConfig
 import zio.logging._
 import zio.stream.ZStream
 
-object RedisZStream {
+object RedisConsumer {
 
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
     ZStream[RedisStream[S] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
@@ -25,7 +25,7 @@ object RedisZStream {
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
   ): ZIO[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
-      def setupStream(status: Ref[StreamSourceStatus]) =
+      def setupStream(status: RefM[StreamSourceStatus]) =
         ZStream
           .fromEffect(getEvents(status))
           .flattenChunks
@@ -46,7 +46,7 @@ object RedisZStream {
   private val initialStreamStatus =
     clock.instant
       .flatMap(t =>
-        Ref.make(
+        RefM.make(
           StreamSourceStatus(
             lastPendingAttempt = t,
             keepPending        = true,
@@ -70,7 +70,7 @@ object RedisZStream {
     }
 
   private def getEvents[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
-    streamStatus: Ref[StreamSourceStatus]
+    streamStatus: RefM[StreamSourceStatus]
   ) =
     getConfig[C].flatMap { config =>
       val group    = config.groupName
@@ -98,21 +98,23 @@ object RedisZStream {
           .plusMillis(config.checkPendingEvery.toMillis)
           .isBefore(currentInstant)
 
-      for {
-        now    <- clock.instant
-        status <- streamStatus.get
-        checkPending = shouldCheckPending(status, now)
-        events <- loadEvents(checkPending, status.checkedMessages)
-        _ <- streamStatus.update(st =>
-              if (checkPending)
-                st.copy(
-                  lastPendingAttempt = now,
-                  keepPending        = events.nonEmpty,
-                  checkedMessages    = events.map(_.messageId).toSet
-                )
-              else st.copy(keepPending = false, checkedMessages = Set.empty)
-            )
-      } yield events
+      streamStatus.modify { oldStatus =>
+        for {
+          now <- clock.instant
+          checkPending = shouldCheckPending(oldStatus, now)
+          events <- loadEvents(checkPending, oldStatus.checkedMessages)
+        } yield {
+          val newStatus =
+            if (checkPending) {
+              StreamSourceStatus(
+                lastPendingAttempt = now,
+                keepPending        = events.nonEmpty,
+                checkedMessages    = events.map(_.messageId).toSet
+              )
+            } else oldStatus.copy(keepPending = false, checkedMessages = Set.empty)
+          events -> newStatus
+        }
+      }
     }
 
   private def acknowledge[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](msgId: Option[StreamMessageId]) =

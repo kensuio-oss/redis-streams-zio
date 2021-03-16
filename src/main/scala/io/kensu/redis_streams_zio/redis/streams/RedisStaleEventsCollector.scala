@@ -9,7 +9,7 @@ import zio.clock.Clock
 import zio.config.getConfig
 import zio.logging._
 
-object RedisZCollector {
+object RedisStaleEventsCollector {
 
   /**
     * Builds the Redis claiming logic for problematic messages.
