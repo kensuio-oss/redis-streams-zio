@@ -2,8 +2,8 @@ package io.kensu.redis_streams_zio.redis.streams.notifications
 
 import io.kensu.redis_streams_zio.common.RetryableStreamError
 import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
-import io.kensu.redis_streams_zio.redis.streams.dto.{ Event, IncorrectEvent, NotificationAddedEvent }
-import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupData, ReadGroupResult, RedisConsumer, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.dto.{Event, IncorrectEvent, NotificationAddedEvent}
+import io.kensu.redis_streams_zio.redis.streams.{ReadGroupData, ReadGroupResult, RedisConsumer, StreamInstance}
 import zio._
 import zio.config.getConfig
 import zio.logging.LogAnnotation.Name
@@ -34,7 +34,7 @@ object NotificationsConsumer {
               case config.addKey =>
                 log.info(s"Parsing add event $msgId") *>
                   ZIO.effect(NotificationAddedEvent(msgId, new String(value.toArray, "UTF-8")))
-              case _ =>
+              case _             =>
                 log.info(s"Received unsupported stream key $key for event $msgId") *>
                   ZIO.effectTotal(IncorrectEvent(msgId))
             }
@@ -57,7 +57,7 @@ object NotificationsConsumer {
             log
               .warn(s"StreamMessageId $id was not processed successfully, scheduled for pending")
               .as(None)
-          case t =>
+          case t                    =>
             log
               .throwable(s"StreamMessageId $id was not processed successfully and can't be retried", t)
               .as(id)
@@ -66,7 +66,7 @@ object NotificationsConsumer {
   }
 
   private def additionalWork(event: Event) = event match {
-    case IncorrectEvent(msgId) => Task(s"Nothing to do for event $msgId")
+    case IncorrectEvent(msgId)                  => Task(s"Nothing to do for event $msgId")
     case NotificationAddedEvent(msgId, payload) =>
       Task.effect(s"Effectfully processed add notification event $msgId with data $payload")
   }

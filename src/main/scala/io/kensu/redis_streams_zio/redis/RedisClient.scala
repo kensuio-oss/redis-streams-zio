@@ -1,8 +1,8 @@
 package io.kensu.redis_streams_zio.redis
 
-import io.kensu.redis_streams_zio.config.{ RedisConfig, StreamName }
+import io.kensu.redis_streams_zio.config.{RedisConfig, StreamName}
 import org.redisson.Redisson
-import org.redisson.api.{ RStream, RedissonClient }
+import org.redisson.api.{RStream, RedissonClient}
 import org.redisson.client.codec.ByteArrayCodec
 import org.redisson.config.Config
 import zio._

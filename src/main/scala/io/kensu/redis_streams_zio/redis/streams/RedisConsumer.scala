@@ -4,7 +4,7 @@ import java.time.Instant
 
 import io.kensu.redis_streams_zio.common.Scheduling
 import io.kensu.redis_streams_zio.config.StreamConsumerConfig
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.{ CreateGroupStrategy, ListGroupStrategy, RedisStream }
+import io.kensu.redis_streams_zio.redis.streams.RedisStream.{CreateGroupStrategy, ListGroupStrategy, RedisStream}
 import org.redisson.api.StreamMessageId
 import zio._
 import zio.clock._
@@ -16,6 +16,7 @@ object RedisConsumer {
 
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
     ZStream[RedisStream[S] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
+
   type StreamOutput[R, S <: StreamInstance, C <: StreamConsumerConfig] =
     ZStream[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
 
@@ -61,11 +62,11 @@ object RedisConsumer {
       for {
         _      <- log.info(s"Looking for Redis group $groupName")
         exists <- RedisStream.listGroups[S].map(_.exists(_.getName == groupName.value))
-        res <- if (exists) log.info(s"Redis consumer group $groupName already created")
-              else {
-                log.info(s"Creating Redis consumer group $groupName") *>
-                  RedisStream.createGroup[S](groupName, CreateGroupStrategy.Newest)
-              }
+        res    <- if (exists) log.info(s"Redis consumer group $groupName already created")
+                  else {
+                    log.info(s"Creating Redis consumer group $groupName") *>
+                      RedisStream.createGroup[S](groupName, CreateGroupStrategy.Newest)
+                  }
       } yield res
     }
 
@@ -80,7 +81,7 @@ object RedisConsumer {
         val (logMsgType, msgType) =
           if (checkPending) "pending" -> ListGroupStrategy.Pending
           else "new" -> ListGroupStrategy.New
-        val commonLogMsg = s"$logMsgType events for group $group and consumer $consumer"
+        val commonLogMsg          = s"$logMsgType events for group $group and consumer $consumer"
 
         log.debug(s"Attempt to check $commonLogMsg") *>
           RedisStream
@@ -100,9 +101,9 @@ object RedisConsumer {
 
       streamStatus.modify { oldStatus =>
         for {
-          now <- clock.instant
+          now         <- clock.instant
           checkPending = shouldCheckPending(oldStatus, now)
-          events <- loadEvents(checkPending, oldStatus.checkedMessages)
+          events      <- loadEvents(checkPending, oldStatus.checkedMessages)
         } yield {
           val newStatus =
             if (checkPending) {
@@ -129,7 +130,7 @@ object RedisConsumer {
                 t => log.throwable(s"Failed to acknowledge Redis event $redisId $commonLogMsg", t),
                 _ => log.info(s"Successfully acknowledged Redis event $redisId $commonLogMsg")
               )
-        case None => UIO(0L)
+        case None          => UIO(0L)
       }
     }
 

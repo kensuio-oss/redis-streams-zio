@@ -8,13 +8,13 @@ import io.kensu.redis_streams_zio.redis.streams.StreamInstance
 import io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications
 import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
 import org.redisson.api.StreamMessageId
-import zio.{ Chunk, ULayer, ZLayer }
+import zio.{Chunk, ULayer, ZLayer}
 import zio.clock._
 import zio.duration._
 import zio.logging.Logging
 import zio.test._
 import zio.test.Assertion._
-import zio.test.environment.{ TestClock, TestEnvironment }
+import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation._
 
 object EventProducerSpec extends DefaultRunnableSpec {
@@ -36,13 +36,13 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
           (for {
             timeBefore <- currentTime(TimeUnit.SECONDS)
-            forked <- EventProducer
-                       .publish[StreamInstance.Notifications.type, TestEvent](testStreamKey, testEvent)
-                       .run
-                       .fork
-            _         <- TestClock.adjust(21.seconds) //3 retries for 3 sec exponential * 2
-            msg       <- forked.join
-            timeAfter <- currentTime(TimeUnit.SECONDS)
+            forked     <- EventProducer
+                            .publish[StreamInstance.Notifications.type, TestEvent](testStreamKey, testEvent)
+                            .run
+                            .fork
+            _          <- TestClock.adjust(21.seconds) //3 retries for 3 sec exponential * 2
+            msg        <- forked.join
+            timeAfter  <- currentTime(TimeUnit.SECONDS)
           } yield {
             assert(msg)(fails(isSubtype[RuntimeException](anything))) &&
             assert(timeAfter - timeBefore)(isGreaterThanEqualTo(21L))
@@ -70,7 +70,9 @@ object EventProducerSpec extends DefaultRunnableSpec {
   final case class TestEvent(msg: String) {
     lazy val asBytes = msg.getBytes("UTF-8")
   }
+
   object TestEvent {
+
     implicit val eventSerializable: EventSerializable[TestEvent] = new EventSerializable[TestEvent] {
       override def serialize(e: TestEvent): Array[Byte] = e.asBytes
     }

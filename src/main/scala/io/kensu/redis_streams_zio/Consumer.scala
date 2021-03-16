@@ -3,11 +3,8 @@ package io.kensu.redis_streams_zio
 import io.kensu.redis_streams_zio.config.Configs
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
-import io.kensu.redis_streams_zio.redis.streams.{ RedisStream, StreamInstance }
-import io.kensu.redis_streams_zio.redis.streams.notifications.{
-  NotificationsConsumer,
-  NotificationsStaleEventsCollector
-}
+import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
+import io.kensu.redis_streams_zio.redis.streams.notifications.{NotificationsConsumer, NotificationsStaleEventsCollector}
 import zio._
 import zio.clock.Clock
 import zio.config.syntax._

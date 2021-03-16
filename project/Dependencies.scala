@@ -1,6 +1,7 @@
 import sbt._
 
 object Dependencies {
+
   object Version {
     val zio       = "1.0.5"
     val zioConfig = "1.0.1"

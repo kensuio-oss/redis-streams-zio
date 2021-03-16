@@ -1,12 +1,12 @@
 package io.kensu.redis_streams_zio.redis
 
 import io.kensu.redis_streams_zio.config.StreamKey
-import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupData, ReadGroupResult }
+import io.kensu.redis_streams_zio.redis.streams.{ReadGroupData, ReadGroupResult}
 import org.redisson.api.StreamMessageId
 import zio.random.Random
 import zio.test.Gen._
-import zio.test.{ Gen, Sized }
-import zio.{ Chunk, Promise }
+import zio.test.{Gen, Sized}
+import zio.{Chunk, Promise}
 
 object PropertyGenerators {
 

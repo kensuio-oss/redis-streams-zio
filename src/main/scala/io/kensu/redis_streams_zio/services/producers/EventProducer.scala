@@ -2,7 +2,7 @@ package io.kensu.redis_streams_zio.services.producers
 
 import io.kensu.redis_streams_zio.config.StreamKey
 import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
-import io.kensu.redis_streams_zio.redis.streams.{ RedisStream, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
 import zio.Schedule.Decision
 import zio._
 import zio.clock.Clock
@@ -36,12 +36,12 @@ object EventProducer {
   trait Service[S <: StreamInstance] {
 
     /**
-      * Publishes a message.
-      * @param streamKey key name under which to store the event
-      * @param event anything that satisfies EventPublishable type class
-      * @tparam E EventSerializable type class
-      * @return a computed message id
-      */
+     * Publishes a message.
+     * @param streamKey key name under which to store the event
+     * @param event anything that satisfies EventPublishable type class
+     * @tparam E EventSerializable type class
+     * @return a computed message id
+     */
     def publish[E: EventSerializable: Tag](
       streamKey: StreamKey,
       event: E

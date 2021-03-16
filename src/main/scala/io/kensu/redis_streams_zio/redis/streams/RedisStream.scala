@@ -2,9 +2,9 @@ package io.kensu.redis_streams_zio.redis.streams
 
 import java.util.concurrent.TimeUnit
 
-import io.kensu.redis_streams_zio.config.{ StreamConsumerName, StreamGroupName, StreamKey }
+import io.kensu.redis_streams_zio.config.{StreamConsumerName, StreamGroupName, StreamKey}
 import io.kensu.redis_streams_zio.redis.RedisClient.RedisClient
-import org.redisson.api.{ PendingEntry, RedissonClient, StreamGroup, StreamMessageId }
+import org.redisson.api.{PendingEntry, RedissonClient, StreamGroup, StreamMessageId}
 import org.redisson.client.RedisException
 import zio.duration.Duration
 import zio.macros.accessible
@@ -14,6 +14,7 @@ final case class ReadGroupData(
   key: StreamKey,
   payload: Chunk[Byte]
 )
+
 final case class ReadGroupResult(
   messageId: StreamMessageId,
   data: Chunk[ReadGroupData]
@@ -27,6 +28,7 @@ object RedisStream {
   trait Service[S <: StreamInstance] {
     def listGroups: Task[Chunk[StreamGroup]]
     def createGroup(groupName: StreamGroupName, strategy: CreateGroupStrategy): Task[Unit]
+
     def readGroup(
       groupName: StreamGroupName,
       consumerName: StreamConsumerName,
@@ -35,6 +37,7 @@ object RedisStream {
       strategy: ListGroupStrategy
     ): Task[Chunk[ReadGroupResult]]
     def ack(groupName: StreamGroupName, ids: NonEmptyChunk[StreamMessageId]): Task[Long]
+
     def fastClaim(
       groupName: StreamGroupName,
       consumerName: StreamConsumerName,
@@ -46,12 +49,14 @@ object RedisStream {
   }
 
   sealed trait CreateGroupStrategy
+
   object CreateGroupStrategy {
     final case object Newest extends CreateGroupStrategy
     final case object All extends CreateGroupStrategy
   }
 
   sealed trait ListGroupStrategy
+
   object ListGroupStrategy {
     final case object New extends ListGroupStrategy
     final case object Pending extends ListGroupStrategy

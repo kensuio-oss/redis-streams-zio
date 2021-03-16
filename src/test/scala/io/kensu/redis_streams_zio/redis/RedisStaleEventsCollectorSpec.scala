@@ -2,17 +2,17 @@ package io.kensu.redis_streams_zio.redis
 
 import io.kensu.redis_streams_zio.config._
 import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
-import io.kensu.redis_streams_zio.redis.streams.{ RedisStaleEventsCollector, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.{RedisStaleEventsCollector, StreamInstance}
 import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
-import org.redisson.api.{ PendingEntry, StreamMessageId }
+import org.redisson.api.{PendingEntry, StreamMessageId}
 import zio._
 import zio.clock.Clock
-import zio.duration.{ durationInt, Duration }
+import zio.duration.{durationInt, Duration}
 import zio.logging.Logging
 import zio.test.Assertion._
-import zio.test.environment.{ TestClock, TestEnvironment }
+import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation._
-import zio.test.{ DefaultRunnableSpec, _ }
+import zio.test.{DefaultRunnableSpec, _}
 
 object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
@@ -45,14 +45,14 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("claim only messages with exceeded idle time from other consumers") {
-        val goodEntry = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
+        val goodEntry                          = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
         val otherConsumerExceededIdleTimeEntry = new PendingEntry(
           new StreamMessageId(65456345),
           "other-consumer",
           config.claiming.maxIdleTime.toMillis + 1,
           0
         )
-        val sameConsumerExceededIdleTimeEntry = new PendingEntry(
+        val sameConsumerExceededIdleTimeEntry  = new PendingEntry(
           new StreamMessageId(546123213),
           config.consumerName.value,
           config.claiming.maxIdleTime.toMillis + 1,
@@ -176,14 +176,14 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("acknowledge only messages with exceeded number of deliveries") {
-        val goodEntry = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
+        val goodEntry                          = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
         val otherConsumerExceededIdleTimeEntry = new PendingEntry(
           new StreamMessageId(65456345),
           "other-consumer",
           0,
           config.claiming.maxNoOfDeliveries + 1L
         )
-        val sameConsumerExceededIdleTimeEntry = new PendingEntry(
+        val sameConsumerExceededIdleTimeEntry  = new PendingEntry(
           new StreamMessageId(546123213),
           config.consumerName.value,
           0,
@@ -213,14 +213,14 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("can keep repeating the acknowledge process") {
-        val goodEntry = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
+        val goodEntry                          = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
         val otherConsumerExceededIdleTimeEntry = new PendingEntry(
           new StreamMessageId(65456345),
           "other-consumer",
           0,
           config.claiming.maxNoOfDeliveries + 1L
         )
-        val sameConsumerExceededIdleTimeEntry = new PendingEntry(
+        val sameConsumerExceededIdleTimeEntry  = new PendingEntry(
           new StreamMessageId(546123213),
           config.consumerName.value,
           0,
@@ -242,7 +242,10 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
                 value(1)
               ) ++
             RedisStreamMock
-              .ListPending(equalTo(config.groupName, 100), value(Chunk(goodEntry, otherConsumerExceededIdleTimeEntry))) ++
+              .ListPending(
+                equalTo(config.groupName, 100),
+                value(Chunk(goodEntry, otherConsumerExceededIdleTimeEntry))
+              ) ++
             RedisStreamMock
               .Ack(equalTo(config.groupName, NonEmptyChunk(otherConsumerExceededIdleTimeEntry.getId)), value(1))
 
@@ -265,13 +268,15 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
   private object TestData {
 
     val config = new StreamConsumerConfig {
-      override val claiming: ClaimingConfig = ClaimingConfig(
+
+      override val claiming: ClaimingConfig         = ClaimingConfig(
         initialDelay      = 5.seconds,
         repeatEvery       = 1.minute,
         maxNoOfDeliveries = 10,
         maxIdleTime       = 1.hour
       )
-      override val retry: RetryConfig = RetryConfig(
+
+      override val retry: RetryConfig               = RetryConfig(
         min    = 5.seconds,
         max    = 1.minute,
         factor = 2

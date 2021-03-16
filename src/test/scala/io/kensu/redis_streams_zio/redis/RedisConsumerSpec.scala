@@ -1,20 +1,20 @@
 package io.kensu.redis_streams_zio.redis
 
 import io.kensu.redis_streams_zio.config._
-import io.kensu.redis_streams_zio.redis.PropertyGenerators.{ redisData, _ }
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.{ CreateGroupStrategy, ListGroupStrategy, RedisStream }
+import io.kensu.redis_streams_zio.redis.PropertyGenerators.{redisData, _}
+import io.kensu.redis_streams_zio.redis.streams.RedisStream.{CreateGroupStrategy, ListGroupStrategy, RedisStream}
 import io.kensu.redis_streams_zio.redis.streams.RedisConsumer.StreamInput
-import io.kensu.redis_streams_zio.redis.streams.{ ReadGroupResult, RedisConsumer, StreamInstance }
+import io.kensu.redis_streams_zio.redis.streams.{ReadGroupResult, RedisConsumer, StreamInstance}
 import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
-import org.redisson.api.{ StreamGroup, StreamMessageId }
+import org.redisson.api.{StreamGroup, StreamMessageId}
 import zio.Schedule.Decision
 import zio._
 import zio.clock.Clock
-import zio.duration.{ durationInt, Duration }
+import zio.duration.{durationInt, Duration}
 import zio.logging.Logging
 import zio.test.Assertion._
 import zio.test._
-import zio.test.environment.{ TestClock, TestEnvironment }
+import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation._
 
 object RedisConsumerSpec extends DefaultRunnableSpec {
@@ -196,7 +196,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                 .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
-                  repeatStrategy = Schedule
+                  repeatStrategy  = Schedule
                     .recurs(3)
                     .onDecision(_ => clock.adjust(config.checkPendingEvery.plusSeconds(1)))
                     .unit
@@ -336,7 +336,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
               .executeFor[Any, StreamInstance.Notifications.type, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
-                repeatStrategy = Schedule.forever
+                repeatStrategy  = Schedule.forever
                   .onDecision({
                     case Decision.Continue(attempt, _, _) if attempt == 1 => shutdownHook.succeed(())
                     case _                                                => ZIO.unit
@@ -373,14 +373,17 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
   )
 
   private object TestData {
+
     val config = new StreamConsumerConfig {
-      override val claiming: ClaimingConfig = ClaimingConfig(
+
+      override val claiming: ClaimingConfig         = ClaimingConfig(
         initialDelay      = 5.seconds,
         repeatEvery       = 1.minute,
         maxNoOfDeliveries = 10,
         maxIdleTime       = 1.hour
       )
-      override val retry: RetryConfig = RetryConfig(
+
+      override val retry: RetryConfig               = RetryConfig(
         min    = 5.seconds,
         max    = 1.minute,
         factor = 2
@@ -402,7 +405,8 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         config.readTimeout,
         ListGroupStrategy.Pending
       )
-    val newReadGroupCorrectArgs =
+
+    val newReadGroupCorrectArgs     =
       (
         config.groupName,
         config.consumerName,

@@ -1,7 +1,7 @@
 package io.kensu.redis_streams_zio.common
 
 import zio.Schedule
-import zio.duration.{ Duration, _ }
+import zio.duration.{Duration, _}
 
 object Scheduling {
 

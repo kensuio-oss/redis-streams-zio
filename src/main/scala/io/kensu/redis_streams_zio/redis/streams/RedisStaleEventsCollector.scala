@@ -12,10 +12,10 @@ import zio.logging._
 object RedisStaleEventsCollector {
 
   /**
-    * Builds the Redis claiming logic for problematic messages.
-    * The logic has to be delayed to not clash with stream processor, so we don't process very old
-    * pending messages and also ack them here in the same time.
-    */
+   * Builds the Redis claiming logic for problematic messages.
+   * The logic has to be delayed to not clash with stream processor, so we don't process very old
+   * pending messages and also ack them here in the same time.
+   */
   def executeFor[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     repeatStrategy: Option[Schedule[Any, Any, Unit]] = None
   ): ZIO[RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
@@ -37,10 +37,10 @@ object RedisStaleEventsCollector {
       val consumer = config.consumerName
       log.debug(s"Listing pending messages for group $group and consumer $consumer") *>
         RedisStream.listPending[S](group, 100).flatMap { pendingEntries =>
-          val conf = config.claiming
+          val conf                               = config.claiming
           val (deliveriesExceededMessages, rest) =
             pendingEntries.partition(_.getLastTimeDelivered > conf.maxNoOfDeliveries)
-          val messagesToClaim = {
+          val messagesToClaim                    = {
             val all = Chunk.fromIterable(
               rest
                 .filter(_.getConsumerName != consumer.value)
@@ -60,7 +60,7 @@ object RedisStaleEventsCollector {
       val batchSize    = messageIds.size
       val commonLogMsg = s"batch of $batchSize messages for group $group"
       NonEmptyChunk.fromChunk(messageIds) match {
-        case None => UIO(0L)
+        case None      => UIO(0L)
         case Some(ids) =>
           log.debug(s"Attempt to acknowledge $commonLogMsg") *>
             RedisStream
@@ -81,7 +81,7 @@ object RedisStaleEventsCollector {
       val batchSize    = messageIds.size
       val commonLogMsg = s"for group $group to consumer $consumer"
       NonEmptyChunk.fromChunk(messageIds) match {
-        case None => UIO(0L)
+        case None      => UIO(0L)
         case Some(ids) =>
           log.debug(s"Attempt to claim batch of $batchSize messages $commonLogMsg $ids") *>
             RedisStream
