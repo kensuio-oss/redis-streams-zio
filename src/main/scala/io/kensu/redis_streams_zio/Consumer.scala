@@ -54,21 +54,10 @@ object Consumer extends App {
     val redisClient = appConfig.narrow(_.redis) >>> RedisClient.live
 
     val notificationsStream = {
-      val notificationsStream = StreamInstance.Notifications
-      appConfig
-        .narrow(_.redisStreams.consumers)
-        .map { hasConsumers =>
-          hasConsumers.get.notifications.streamName match {
-            case notificationsStream.name => ()
-            case s                        => throw new IllegalStateException(s"Unsupported stream $s")
-          }
-        }
-        .build
-        .zipRight {
-          val stream = redisClient >>> RedisStream.buildFor(notificationsStream)
-          stream.build
-        }
-        .toLayerMany
+      val streamInstance = appConfig.narrow(_.redisStreams.consumers).map(hasConsumers =>
+        Has(StreamInstance.Notifications(hasConsumers.get.notifications.streamName))
+      )
+      (streamInstance ++ redisClient) >>> RedisStream.live
     }
 
     val clock = ZLayer.identity[Clock]

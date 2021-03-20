@@ -9,6 +9,6 @@ object NotificationsStaleEventsCollector {
 
   def run() =
     log.locally(Name(List(getClass.getName))) {
-      RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, NotificationsStreamConsumerConfig]()
+      RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, NotificationsStreamConsumerConfig]()
     }
 }

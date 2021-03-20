@@ -15,7 +15,7 @@ object NotificationsConsumer {
     log.locally(Name(List(getClass.getName))) {
       RedisConsumer.executeFor[
         Has[NotificationsStreamConsumerConfig],
-        StreamInstance.Notifications.type,
+        StreamInstance.Notifications,
         NotificationsStreamConsumerConfig
       ](
         shutdownHook    = shutdownHook,

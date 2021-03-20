@@ -1,10 +1,10 @@
 package io.kensu.redis_streams_zio.services.producers
 
 import io.kensu.redis_streams_zio.config.StreamKey
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
 import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
-import zio.Schedule.Decision
+import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
 import zio._
+import zio.Schedule.Decision
 import zio.clock.Clock
 import zio.duration._
 import zio.logging._
@@ -19,9 +19,7 @@ object EventSerializable {
   def apply[E](implicit bc: EventSerializable[E]): EventSerializable[E] = bc
 
   implicit val StringEventSerializable: EventSerializable[String] =
-    new EventSerializable[String] {
-      override def serialize(e: String): Array[Byte] = e.getBytes("UTF-8")
-    }
+    (e: String) => e.getBytes("UTF-8")
 }
 
 final case class PublishedEventId(value: String) extends AnyVal {
@@ -48,17 +46,14 @@ object EventProducer {
     ): Task[PublishedEventId]
   }
 
-  def redisFor[S <: StreamInstance: Tag](
-    instance: S
-  ): ZLayer[RedisStream[S] with Clock with Logging, Throwable, EventProducer[S]] =
+  def live[S <: StreamInstance: Tag]: ZLayer[RedisStream[S] with Clock with Logging, Throwable, EventProducer[S]] =
     ZLayer.fromFunction { env =>
       new Service[S] {
-        private val streamName = instance.name
 
         override def publish[E: EventSerializable: Tag](
           key: StreamKey,
           event: E
-        ): Task[PublishedEventId] = {
+        ): Task[PublishedEventId] = RedisStream.streamInstance[S].map(_.name).flatMap { streamName =>
           val send =
             log.debug(s"Producing event to $streamName -> $key") *>
               RedisStream
@@ -77,8 +72,8 @@ object EventProducer {
                 case Decision.Continue(attempt, _, _) => log.info(s"An event will be retried #${attempt + 1}")
               })
 
-          send.retry(retryPolicy).provide(env)
-        }
+          send.retry(retryPolicy)
+        }.provide(env)
       }
     }
 }

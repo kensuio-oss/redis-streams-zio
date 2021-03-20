@@ -24,7 +24,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
       testM("does not begin processing before initial delay") {
         val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty)).atMost(0)
 
-        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
         (for {
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay.minusMillis(1))
@@ -35,7 +35,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
       testM("begin processing after initial delay") {
         val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty))
 
-        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -74,7 +74,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
               value(Chunk(otherConsumerExceededIdleTimeEntry.getId))
             )
 
-        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -112,7 +112,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
               value(Chunk(exceededIdleTimeEntry1.getId))
             )
 
-        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -164,7 +164,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
             )
 
         val collector =
-          RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig](
+          RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig](
             Some(Schedule.once)
           )
 
@@ -203,7 +203,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
               value(2)
             )
 
-        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications.type, StreamConsumerConfig]()
+        val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
         (for {
           forked <- collector.fork
@@ -250,7 +250,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
               .Ack(equalTo(config.groupName, NonEmptyChunk(otherConsumerExceededIdleTimeEntry.getId)), value(1))
 
         val collector = RedisStaleEventsCollector
-          .executeFor[StreamInstance.Notifications.type, StreamConsumerConfig](Some(Schedule.once))
+          .executeFor[StreamInstance.Notifications, StreamConsumerConfig](Some(Schedule.once))
 
         (for {
           forked <- collector.fork
@@ -262,14 +262,14 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
     ) @@ TestAspect.timeout(30.seconds)
   }
 
-  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications.type]]) =
+  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
   private object TestData {
 
     val config = new StreamConsumerConfig {
 
-      override val claiming: ClaimingConfig         = ClaimingConfig(
+      override val claiming: ClaimingConfig = ClaimingConfig(
         initialDelay      = 5.seconds,
         repeatEvery       = 1.minute,
         maxNoOfDeliveries = 10,

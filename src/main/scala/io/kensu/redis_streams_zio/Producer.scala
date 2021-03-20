@@ -26,7 +26,7 @@ object Producer extends App {
     for {
       config <- getConfig[NotificationsStreamProducerConfig]
       str    <- nextString(10)
-      _      <- EventProducer.publish[StreamInstance.Notifications.type, String](config.addKey, str)
+      _      <- EventProducer.publish[StreamInstance.Notifications, String](config.addKey, str)
     } yield ()
 
   private val liveEnv = {
@@ -43,26 +43,14 @@ object Producer extends App {
     val clock = ZLayer.identity[Clock]
 
     val notificationsStream = {
-      val notificationsStream = StreamInstance.Notifications
       val redisStream = {
-        appConfig
-          .narrow(_.redisStreams.producers)
-          .map { hasProducers =>
-            hasProducers.get.notifications.streamName match {
-              case notificationsStream.name => ()
-              case s                        => throw new IllegalStateException(s"Unsupported stream $s")
-            }
-          }
-          .build
-          .zipRight {
-            val stream = redisClient >>> RedisStream.buildFor(notificationsStream)
-            stream.build
-          }
-          .toLayerMany
+        val streamInstance = appConfig.narrow(_.redisStreams.producers).map { hasProducers =>
+          Has(StreamInstance.Notifications(hasProducers.get.notifications.streamName))
+        }
+        (streamInstance ++ redisClient) >>> RedisStream.live
       }
 
-//      val redisStream = (redisClient >>> RedisStream.buildFor(StreamInstance.Notifications))
-      (redisStream ++ clock ++ logging) >>> EventProducer.redisFor(notificationsStream)
+      (redisStream ++ clock ++ logging) >>> EventProducer.live
     }
 
     clock ++ logging ++ producerConfig ++ notificationsStream
