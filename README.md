@@ -1,8 +1,10 @@
 # redis-streams-zio
 
+![example workflow](https://github.com/kensuio-oss/redis-streams-zio/actions/workflows/ci.yml/badge.svg)
+
 The Redis Stream consumer and producer implementation with ZIO-Streams. Targets Java 11.
 
-Prerequisites
+## Prerequisites
 
 Run Redis and Redis Insight docker containers.
 
@@ -10,9 +12,9 @@ Run Redis and Redis Insight docker containers.
 docker-compose -f docker/docker-compose.yaml up
 ```
 
-## Redis Insight
+## Checking the events passing around
 
-You can take a look what is happening inside Redis with this tool.
+You can take a look what is happening inside Redis with Redis Insight tool.
 
 1. Head to http://localhost:8002
 1. Add a new instance:
