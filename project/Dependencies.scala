@@ -14,7 +14,7 @@ object Dependencies {
     "dev.zio" %% "zio-config-magnolia" % Version.zioConfig,
     "dev.zio" %% "zio-config-typesafe" % Version.zioConfig,
     "dev.zio" %% "zio-test-sbt"        % Version.zio % Test
-  )
+  ).map(_.cross(CrossVersion.for3Use2_13))
 
   val redisson = Seq("org.redisson" % "redisson" % "3.15.5")
 

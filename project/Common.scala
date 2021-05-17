@@ -31,14 +31,14 @@ object Common {
           scalaVersion := "2.13.5",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
-          scalacOptions in (Compile, console) --= Seq("-Wunused:imports", "-Werror"),
+          Compile / console / scalacOptions --= Seq("-Wunused:imports", "-Werror"),
           scalacOptions ++= Seq("-target:11", "--release", "11"),
           javacOptions ++= Seq("--release", "11"),
-          cancelable in Global := true,
-          parallelExecution in Test := true,
+          Global / cancelable := true,
           fork := true,
-          logBuffered in Test := false,
-          testOptions in Test += Tests.Argument("-oDF"),
+          Test / parallelExecution := true,
+          Test / logBuffered := false,
+          Test / testOptions += Tests.Argument("-oDF"),
           testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
         )
 
