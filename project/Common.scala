@@ -12,13 +12,9 @@ object Common {
     "-language:existentials",
     "-language:higherKinds",
     "-language:implicitConversions",
-    "-language:postfixOps",
-    "-Ymacro-annotations",
-    "-Wdead-code",
-//    "-Werror",
-//    "-Wunused",
-    "-Wnumeric-widen",
-    "-Xlint:-infer-any"
+    "-language:postfixOps"
+    //"-explain-types",
+//    "-Werror"
   )
 
   implicit class ProjectFrom(project: Project) {
@@ -28,11 +24,13 @@ object Common {
         .settings(
           organization := "io.kensu",
           name := "redis-streams-zio",
-          scalaVersion := "2.13.5",
+          scalacOptions ++= Seq("-Yrangepos", "-Xsource:3"),
+          semanticdbVersion := "4.4.18",
+          scalaVersion := "2.13.6",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
-          Compile / console / scalacOptions --= Seq("-Wunused:imports", "-Werror"),
-          scalacOptions ++= Seq("-target:11", "--release", "11"),
+          Compile / console / scalacOptions --= Seq("-Werror"),
+          //scalacOptions ++= Seq("-Xtarget:11"),
           javacOptions ++= Seq("--release", "11"),
           Global / cancelable := true,
           fork := true,
