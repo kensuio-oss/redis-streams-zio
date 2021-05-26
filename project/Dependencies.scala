@@ -10,7 +10,6 @@ object Dependencies {
   val zio = Seq(
     "dev.zio" %% "zio"                 % Version.zio,
     "dev.zio" %% "zio-streams"         % Version.zio,
-    "dev.zio" %% "zio-macros"          % Version.zio,
     "dev.zio" %% "zio-logging-slf4j"   % "0.5.10",
     "dev.zio" %% "zio-config-magnolia" % Version.zioConfig,
     "dev.zio" %% "zio-config-typesafe" % Version.zioConfig,
