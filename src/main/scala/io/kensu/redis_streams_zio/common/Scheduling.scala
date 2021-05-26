@@ -5,13 +5,13 @@ import zio.duration.{Duration, _}
 
 object Scheduling {
 
-  def exponentialBackoff[R, E](
+  def exponentialBackoff[E](
     min: Duration,
     max: Duration,
     factor: Double         = 2.0,
     maxRecurs: Option[Int] = None
-  ): Schedule[R, E, Any] =
-    (Schedule.exponential(min, factor).whileOutput(_ <= max) andThen Schedule.fixed(max)) && maxRecurs
+  ): Schedule[Any, E, Long] =
+    ((Schedule.exponential(min, factor).whileOutput(_ <= max) andThen Schedule.fixed(max)) && maxRecurs
       .map(Schedule.recurs)
-      .getOrElse(Schedule.forever)
+      .getOrElse(Schedule.forever)).map(_._2)
 }

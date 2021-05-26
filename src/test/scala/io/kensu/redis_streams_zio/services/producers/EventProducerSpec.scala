@@ -3,9 +3,9 @@ package io.kensu.redis_streams_zio.services.producers
 import java.util.concurrent.TimeUnit
 
 import io.kensu.redis_streams_zio.config.{StreamKey, StreamName}
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
 import io.kensu.redis_streams_zio.redis.streams.StreamInstance
-import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
+import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.StreamMessageId
 import zio.{Chunk, ULayer, ZLayer}
 import zio.clock._
@@ -20,26 +20,35 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
   import TestData._
 
-  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore >>> EventProducer.live
+  private def testEnv(redisStreamMock: ULayer[NotificationsRedisStream]) =
+    redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore >>> NotificationsEventProducer.redis
 
   override def spec: ZSpec[TestEnvironment, Failure] =
     suite("EventProducer.redis")(
       suite("publish")(
         testM("fail if cannot send an event") {
           val redisStreamMock =
-            RedisStreamMock.StreamInstance(value(StreamInstance.Notifications(streamName))) ++
-              RedisStreamMock.Add(equalTo(testStreamKey, testEventBytes), failure(new RuntimeException("BOOM"))) ++
-              RedisStreamMock.Add(equalTo(testStreamKey, testEventBytes), failure(new RuntimeException("BOOM"))) ++
-              RedisStreamMock.Add(equalTo(testStreamKey, testEventBytes), failure(new RuntimeException("BOOM"))) ++
-              RedisStreamMock.Add(equalTo(testStreamKey, testEventBytes), failure(new RuntimeException("BOOM")))
+            NotificationsRedisStreamMock.StreamInstance(value(StreamInstance.Notifications(streamName))) ++
+              NotificationsRedisStreamMock.Add(
+                equalTo(testStreamKey, testEventBytes),
+                failure(new RuntimeException("BOOM"))
+              ) ++
+              NotificationsRedisStreamMock.Add(
+                equalTo(testStreamKey, testEventBytes),
+                failure(new RuntimeException("BOOM"))
+              ) ++
+              NotificationsRedisStreamMock.Add(
+                equalTo(testStreamKey, testEventBytes),
+                failure(new RuntimeException("BOOM"))
+              ) ++
+              NotificationsRedisStreamMock.Add(
+                equalTo(testStreamKey, testEventBytes),
+                failure(new RuntimeException("BOOM"))
+              )
 
           (for {
             timeBefore <- currentTime(TimeUnit.SECONDS)
-            forked     <- EventProducer
-                            .publish[StreamInstance.Notifications, TestEvent](testStreamKey, testEvent)
-                            .run
-                            .fork
+            forked     <- NotificationsEventProducer(_.publish(testStreamKey, testEvent)).run.fork
             _          <- TestClock.adjust(21.seconds) //3 retries for 3 sec exponential * 2
             msg        <- forked.join
             timeAfter  <- currentTime(TimeUnit.SECONDS)
@@ -50,11 +59,13 @@ object EventProducerSpec extends DefaultRunnableSpec {
         },
         testM("succeed if can send an event") {
           val redisStreamMock =
-            RedisStreamMock.StreamInstance(value(StreamInstance.Notifications(streamName))) ++
-              RedisStreamMock.Add(equalTo(testStreamKey, testEventBytes), value(new StreamMessageId(123L, 456L)))
+            NotificationsRedisStreamMock.StreamInstance(value(StreamInstance.Notifications(streamName))) ++
+              NotificationsRedisStreamMock.Add(
+                equalTo(testStreamKey, testEventBytes),
+                value(new StreamMessageId(123L, 456L))
+              )
 
-          EventProducer
-            .publish[StreamInstance.Notifications, TestEvent](testStreamKey, testEvent)
+          NotificationsEventProducer(_.publish(testStreamKey, testEvent))
             .map(createdMsgId => assert(createdMsgId)(equalTo(PublishedEventId("123-456"))))
             .provideCustomLayer(testEnv(redisStreamMock))
         }

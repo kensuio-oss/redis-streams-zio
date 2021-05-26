@@ -2,18 +2,24 @@ package io.kensu.redis_streams_zio.redis
 
 import io.kensu.redis_streams_zio.config._
 import io.kensu.redis_streams_zio.redis.PropertyGenerators.{redisData, _}
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.{CreateGroupStrategy, ListGroupStrategy, RedisStream}
+import io.kensu.redis_streams_zio.redis.streams.{
+  CreateGroupStrategy,
+  ListGroupStrategy,
+  ReadGroupResult,
+  RedisConsumer,
+  StreamInstance
+}
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
 import io.kensu.redis_streams_zio.redis.streams.RedisConsumer.StreamInput
-import io.kensu.redis_streams_zio.redis.streams.{ReadGroupResult, RedisConsumer, StreamInstance}
-import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
+import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{StreamGroup, StreamMessageId}
-import zio.Schedule.Decision
 import zio._
+import zio.Schedule.Decision
 import zio.clock.Clock
 import zio.duration.{durationInt, Duration}
 import zio.logging.Logging
-import zio.test.Assertion._
 import zio.test._
+import zio.test.Assertion._
 import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation._
 
@@ -28,8 +34,10 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise) {
           shutdownHook =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -45,9 +53,12 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise) {
           shutdownHook =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk.empty)) ++
-                RedisStreamMock.CreateGroup(equalTo((config.groupName, CreateGroupStrategy.Newest)), unit) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.CreateGroup(
+                  equalTo((config.groupName, CreateGroupStrategy.Newest)),
+                  unit
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -62,9 +73,13 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
       testM("create consumer group if there is no requested one available") {
         checkAllM(promise) {
           shutdownHook =>
-            val redisStreamMock = RedisStreamMock.ListGroups(value(Chunk(new StreamGroup("no-way", 0, 0, null)))) ++
-              RedisStreamMock.CreateGroup(equalTo((config.groupName, CreateGroupStrategy.Newest)), unit) ++
-              RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+            val redisStreamMock =
+              NotificationsRedisStreamMock.ListGroups(value(Chunk(new StreamGroup("no-way", 0, 0, null)))) ++
+                NotificationsRedisStreamMock.CreateGroup(
+                  equalTo((config.groupName, CreateGroupStrategy.Newest)),
+                  unit
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -80,8 +95,10 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise) {
           shutdownHook =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -97,13 +114,27 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise, redisData(streamKey), redisData(streamKey)) {
           (shutdownHook, redisData1, redisData2) =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData1))) ++
-                RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData1.messageId))), value(1)) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData2))) ++
-                RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))), value(1)) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
-                RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(
+                  equalTo(pendingReadGroupCorrectArgs),
+                  value(Chunk(redisData1))
+                ) ++
+                NotificationsRedisStreamMock.Ack(
+                  equalTo((config.groupName, NonEmptyChunk(redisData1.messageId))),
+                  value(1)
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(
+                  equalTo(pendingReadGroupCorrectArgs),
+                  value(Chunk(redisData2))
+                ) ++
+                NotificationsRedisStreamMock.Ack(
+                  equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))),
+                  value(1)
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -119,9 +150,17 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise, redisData(streamKey), redisData(streamKey)) {
           (shutdownHook, redisData1, redisData2) =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData1, redisData2))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData1, redisData2)))
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(
+                  equalTo(pendingReadGroupCorrectArgs),
+                  value(Chunk(redisData1, redisData2))
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(
+                  equalTo(pendingReadGroupCorrectArgs),
+                  value(Chunk(redisData1, redisData2))
+                )
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -137,13 +176,21 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise, redisData(streamKey), redisData(streamKey)) {
           (shutdownHook, redisData1, redisData2) =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
-                RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData1))) ++
-                RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData1.messageId))), value(1)) ++
-                RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData2))) ++
-                RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))), value(1)) ++
-                RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData1))) ++
+                NotificationsRedisStreamMock.Ack(
+                  equalTo((config.groupName, NonEmptyChunk(redisData1.messageId))),
+                  value(1)
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData2))) ++
+                NotificationsRedisStreamMock.Ack(
+                  equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))),
+                  value(1)
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -164,12 +211,17 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
             }
 
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
-                RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData1))) ++
-                RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData2))) ++
-                RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))), value(1)) ++
-                RedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData1))) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk(redisData2))) ++
+                NotificationsRedisStreamMock.Ack(
+                  equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))),
+                  value(1)
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(newReadGroupCorrectArgs), value(Chunk.empty))
 
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -185,11 +237,13 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise) {
           shutdownHook =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             def stream(clock: TestClock.Service) =
               RedisConsumer
@@ -213,9 +267,14 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise) {
           shutdownHook =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(failure(new RuntimeException("BOOM"))) ++
-                RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+              NotificationsRedisStreamMock.ListGroups(failure(new RuntimeException("BOOM"))) ++
+                NotificationsRedisStreamMock.ListGroups(value(Chunk(new StreamGroup(
+                  config.groupName.value,
+                  0,
+                  0,
+                  null
+                )))) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             val stream =
               RedisConsumer
@@ -237,14 +296,17 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise) {
           shutdownHook =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk.empty)) ++
-                RedisStreamMock.CreateGroup(
+              NotificationsRedisStreamMock.ListGroups(value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.CreateGroup(
                   equalTo((config.groupName, CreateGroupStrategy.Newest)),
                   failure(new RuntimeException("BOOM"))
                 ) ++
-                RedisStreamMock.ListGroups(value(Chunk.empty)) ++
-                RedisStreamMock.CreateGroup(equalTo((config.groupName, CreateGroupStrategy.Newest)), unit) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+                NotificationsRedisStreamMock.ListGroups(value(Chunk.empty)) ++
+                NotificationsRedisStreamMock.CreateGroup(
+                  equalTo((config.groupName, CreateGroupStrategy.Newest)),
+                  unit
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             val stream =
               RedisConsumer
@@ -266,11 +328,18 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise) {
           shutdownHook =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock
                   .ReadGroup(equalTo(pendingReadGroupCorrectArgs), failure(new RuntimeException("BOOM"))) ++
-                RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
+                NotificationsRedisStreamMock.ListGroups(value(Chunk(new StreamGroup(
+                  config.groupName.value,
+                  0,
+                  0,
+                  null
+                )))) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
             val stream =
               RedisConsumer
@@ -292,16 +361,26 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise, redisData(streamKey)) {
           (shutdownHook, redisData) =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData))) ++
-                RedisStreamMock
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData))) ++
+                NotificationsRedisStreamMock
                   .Ack(
                     equalTo((config.groupName, NonEmptyChunk(redisData.messageId))),
                     failure(new RuntimeException("BOOM"))
                   ) ++
-                RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData))) ++
-                RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData.messageId))), value(1))
+                NotificationsRedisStreamMock.ListGroups(value(Chunk(new StreamGroup(
+                  config.groupName.value,
+                  0,
+                  0,
+                  null
+                )))) ++
+                NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData))) ++
+                NotificationsRedisStreamMock.Ack(
+                  equalTo((config.groupName, NonEmptyChunk(redisData.messageId))),
+                  value(1)
+                )
 
             val stream =
               RedisConsumer
@@ -323,14 +402,28 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise, uniqueRedisData(streamKey)) {
           case (shutdownHook, (redisData1, redisData2)) =>
             val redisStreamMock =
-              RedisStreamMock.ListGroups(value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData1))) ++
-                RedisStreamMock.Ack(equalTo((config.groupName, NonEmptyChunk(redisData1.messageId))), value(1)) ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk(redisData2))).optional ++
-                RedisStreamMock
+              NotificationsRedisStreamMock.ListGroups(
+                value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+              ) ++
+                NotificationsRedisStreamMock.ReadGroup(
+                  equalTo(pendingReadGroupCorrectArgs),
+                  value(Chunk(redisData1))
+                ) ++
+                NotificationsRedisStreamMock.Ack(
+                  equalTo((config.groupName, NonEmptyChunk(redisData1.messageId))),
+                  value(1)
+                ) ++
+                NotificationsRedisStreamMock.ReadGroup(
+                  equalTo(pendingReadGroupCorrectArgs),
+                  value(Chunk(redisData2))
+                ).optional ++
+                NotificationsRedisStreamMock
                   .Ack(equalTo((config.groupName, NonEmptyChunk(redisData2.messageId))), value(1))
                   .optional ++
-                RedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)).optional
+                NotificationsRedisStreamMock.ReadGroup(
+                  equalTo(pendingReadGroupCorrectArgs),
+                  value(Chunk.empty)
+                ).optional
 
             val stream = RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
@@ -364,7 +457,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
   ) =
     stream.mapM(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
 
-  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
+  private def testEnv(redisStreamMock: ULayer[NotificationsRedisStream]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
   private[this] case class TestEvent(
