@@ -4,7 +4,7 @@ import io.kensu.redis_streams_zio.config.{Configs, NotificationsStreamProducerCo
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
 import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
-import io.kensu.redis_streams_zio.services.producers.EventProducer
+import io.kensu.redis_streams_zio.services.producers.NotificationsEventProducer
 import zio._
 import zio.clock.Clock
 import zio.config.getConfig
@@ -26,7 +26,7 @@ object Producer extends App {
     for {
       config <- getConfig[NotificationsStreamProducerConfig]
       str    <- nextString(10)
-      _      <- EventProducer.publish[StreamInstance.Notifications, String](config.addKey, str)
+      _      <- NotificationsEventProducer(_.publish(config.addKey, str))
     } yield ()
 
   private val liveEnv = {
@@ -50,7 +50,7 @@ object Producer extends App {
         (streamInstance ++ redisClient) >>> RedisStream.live
       }
 
-      (redisStream ++ clock ++ logging) >>> EventProducer.live
+      (redisStream ++ clock ++ logging) >>> NotificationsEventProducer.redis
     }
 
     clock ++ logging ++ producerConfig ++ notificationsStream

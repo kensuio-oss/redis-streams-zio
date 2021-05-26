@@ -21,7 +21,7 @@ object EventProducerSpec extends DefaultRunnableSpec {
   import TestData._
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore >>> EventProducer.live
+    redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore >>> NotificationsEventProducer.redis
 
   override def spec: ZSpec[TestEnvironment, Failure] =
     suite("EventProducer.redis")(
@@ -36,10 +36,7 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
           (for {
             timeBefore <- currentTime(TimeUnit.SECONDS)
-            forked     <- EventProducer
-                            .publish[StreamInstance.Notifications, TestEvent](testStreamKey, testEvent)
-                            .run
-                            .fork
+            forked     <- NotificationsEventProducer(_.publish(testStreamKey, testEvent)).run.fork
             _          <- TestClock.adjust(21.seconds) //3 retries for 3 sec exponential * 2
             msg        <- forked.join
             timeAfter  <- currentTime(TimeUnit.SECONDS)
@@ -53,8 +50,7 @@ object EventProducerSpec extends DefaultRunnableSpec {
             RedisStreamMock.StreamInstance(value(StreamInstance.Notifications(streamName))) ++
               RedisStreamMock.Add(equalTo(testStreamKey, testEventBytes), value(new StreamMessageId(123L, 456L)))
 
-          EventProducer
-            .publish[StreamInstance.Notifications, TestEvent](testStreamKey, testEvent)
+          NotificationsEventProducer(_.publish(testStreamKey, testEvent))
             .map(createdMsgId => assert(createdMsgId)(equalTo(PublishedEventId("123-456"))))
             .provideCustomLayer(testEnv(redisStreamMock))
         }
