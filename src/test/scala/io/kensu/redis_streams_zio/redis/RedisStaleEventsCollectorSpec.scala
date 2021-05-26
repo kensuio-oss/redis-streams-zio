@@ -1,18 +1,18 @@
 package io.kensu.redis_streams_zio.redis
 
 import io.kensu.redis_streams_zio.config._
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
 import io.kensu.redis_streams_zio.redis.streams.{RedisStaleEventsCollector, StreamInstance}
-import io.kensu.redis_streams_zio.specs.mocks.RedisStreamMock
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
+import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{PendingEntry, StreamMessageId}
 import zio._
 import zio.clock.Clock
 import zio.duration.{durationInt, Duration}
 import zio.logging.Logging
+import zio.test.{DefaultRunnableSpec, _}
 import zio.test.Assertion._
 import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation._
-import zio.test.{DefaultRunnableSpec, _}
 
 object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
@@ -22,7 +22,8 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
     import zio.duration._
     suite("RedisZCollector.executeFor")(
       testM("does not begin processing before initial delay") {
-        val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty)).atMost(0)
+        val redisStreamMock =
+          NotificationsRedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty)).atMost(0)
 
         val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
         (for {
@@ -33,7 +34,8 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("begin processing after initial delay") {
-        val redisStreamMock = RedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty))
+        val redisStreamMock =
+          NotificationsRedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty))
 
         val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
@@ -60,11 +62,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
         )
 
         val redisStreamMock =
-          RedisStreamMock.ListPending(
+          NotificationsRedisStreamMock.ListPending(
             equalTo(config.groupName, 100),
             value(Chunk(goodEntry, otherConsumerExceededIdleTimeEntry, sameConsumerExceededIdleTimeEntry))
           ) ++
-            RedisStreamMock.FastClaim(
+            NotificationsRedisStreamMock.FastClaim(
               equalTo(
                 config.groupName,
                 config.consumerName,
@@ -98,11 +100,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
         )
 
         val redisStreamMock =
-          RedisStreamMock.ListPending(
+          NotificationsRedisStreamMock.ListPending(
             equalTo(config.groupName, 100),
             value(Chunk(exceededIdleTimeEntry1, exceededIdleTimeEntry2))
           ) ++
-            RedisStreamMock.FastClaim(
+            NotificationsRedisStreamMock.FastClaim(
               equalTo(
                 config.groupName,
                 config.consumerName,
@@ -136,11 +138,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
         )
 
         val redisStreamMock =
-          RedisStreamMock.ListPending(
+          NotificationsRedisStreamMock.ListPending(
             equalTo(config.groupName, 100),
             value(Chunk(exceededIdleTimeEntry1, exceededIdleTimeEntry2))
           ) ++
-            RedisStreamMock.FastClaim(
+            NotificationsRedisStreamMock.FastClaim(
               equalTo(
                 config.groupName,
                 config.consumerName,
@@ -149,11 +151,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
               ),
               value(Chunk(exceededIdleTimeEntry1.getId))
             ) ++
-            RedisStreamMock.ListPending(
+            NotificationsRedisStreamMock.ListPending(
               equalTo(config.groupName, 100),
               value(Chunk(exceededIdleTimeEntry1))
             ) ++
-            RedisStreamMock.FastClaim(
+            NotificationsRedisStreamMock.FastClaim(
               equalTo(
                 config.groupName,
                 config.consumerName,
@@ -191,11 +193,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
         )
 
         val redisStreamMock =
-          RedisStreamMock.ListPending(
+          NotificationsRedisStreamMock.ListPending(
             equalTo(config.groupName, 100),
             value(Chunk(goodEntry, otherConsumerExceededIdleTimeEntry, sameConsumerExceededIdleTimeEntry))
           ) ++
-            RedisStreamMock.Ack(
+            NotificationsRedisStreamMock.Ack(
               equalTo(
                 config.groupName,
                 NonEmptyChunk(otherConsumerExceededIdleTimeEntry.getId, sameConsumerExceededIdleTimeEntry.getId)
@@ -228,12 +230,12 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
         )
 
         val redisStreamMock =
-          RedisStreamMock
+          NotificationsRedisStreamMock
             .ListPending(
               equalTo(config.groupName, 100),
               value(Chunk(goodEntry, otherConsumerExceededIdleTimeEntry, sameConsumerExceededIdleTimeEntry))
             ) ++
-            RedisStreamMock
+            NotificationsRedisStreamMock
               .Ack(
                 equalTo(
                   config.groupName,
@@ -241,12 +243,12 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
                 ),
                 value(1)
               ) ++
-            RedisStreamMock
+            NotificationsRedisStreamMock
               .ListPending(
                 equalTo(config.groupName, 100),
                 value(Chunk(goodEntry, otherConsumerExceededIdleTimeEntry))
               ) ++
-            RedisStreamMock
+            NotificationsRedisStreamMock
               .Ack(equalTo(config.groupName, NonEmptyChunk(otherConsumerExceededIdleTimeEntry.getId)), value(1))
 
         val collector = RedisStaleEventsCollector
@@ -262,7 +264,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
     ) @@ TestAspect.timeout(30.seconds)
   }
 
-  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
+  private def testEnv(redisStreamMock: ULayer[NotificationsRedisStream]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
   private object TestData {

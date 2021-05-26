@@ -3,7 +3,7 @@ package io.kensu.redis_streams_zio
 import io.kensu.redis_streams_zio.config.{Configs, NotificationsStreamProducerConfig}
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
-import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
+import io.kensu.redis_streams_zio.redis.streams.{NotificationsRedisStream, StreamInstance}
 import io.kensu.redis_streams_zio.services.producers.NotificationsEventProducer
 import zio._
 import zio.clock.Clock
@@ -47,7 +47,7 @@ object Producer extends App {
         val streamInstance = appConfig.narrow(_.redisStreams.producers).map { hasProducers =>
           Has(StreamInstance.Notifications(hasProducers.get.notifications.streamName))
         }
-        (streamInstance ++ redisClient) >>> RedisStream.live
+        (streamInstance ++ redisClient) >>> NotificationsRedisStream.redisson
       }
 
       (redisStream ++ clock ++ logging) >>> NotificationsEventProducer.redis

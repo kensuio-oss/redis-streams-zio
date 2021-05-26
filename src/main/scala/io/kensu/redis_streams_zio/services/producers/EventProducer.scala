@@ -3,7 +3,7 @@ package io.kensu.redis_streams_zio.services.producers
 import io.kensu.redis_streams_zio.common.Accessible
 import io.kensu.redis_streams_zio.config.StreamKey
 import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.RedisStream
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
 import zio._
 import zio.Schedule.Decision
 import zio.clock.Clock
@@ -42,7 +42,7 @@ trait EventProducer[S <: StreamInstance] {
 }
 
 final case class RedisEventProducer[S <: StreamInstance: Tag](
-  stream: RedisStream.Service[S],
+  stream: RedisStream[S],
   clock: Clock.Service,
   log: Logger[String]
 ) extends EventProducer[S] {
@@ -73,10 +73,13 @@ final case class RedisEventProducer[S <: StreamInstance: Tag](
     }
 }
 
+/**
+ * An additional, stream instance predefined definition for easier API usage and future refactoring.
+ */
 object NotificationsEventProducer extends Accessible[EventProducer[StreamInstance.Notifications]] {
 
   type NotificationsEventProducer = Has[EventProducer[StreamInstance.Notifications]]
 
-  def redis: URLayer[RedisStream[StreamInstance.Notifications] & Clock & Logging, NotificationsEventProducer] =
+  val redis: URLayer[NotificationsRedisStream & Clock & Logging, NotificationsEventProducer] =
     (RedisEventProducer[StreamInstance.Notifications](_, _, _)).toLayer
 }

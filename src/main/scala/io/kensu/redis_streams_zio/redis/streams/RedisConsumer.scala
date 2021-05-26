@@ -4,7 +4,6 @@ import java.time.Instant
 
 import io.kensu.redis_streams_zio.common.Scheduling
 import io.kensu.redis_streams_zio.config.StreamConsumerConfig
-import io.kensu.redis_streams_zio.redis.streams.RedisStream.{CreateGroupStrategy, ListGroupStrategy, RedisStream}
 import org.redisson.api.StreamMessageId
 import zio._
 import zio.clock._
@@ -14,17 +13,18 @@ import zio.stream.ZStream
 
 object RedisConsumer {
 
+  //TODO replace with &
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[RedisStream[S] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
+    ZStream[Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
 
   type StreamOutput[R, S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
+    ZStream[R with Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
 
   def executeFor[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     shutdownHook: Promise[Throwable, Unit],
     eventsProcessor: StreamInput[S, C] => StreamOutput[R, S, C],
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
-  ): ZIO[R with RedisStream[S] with Has[C] with Logging with Clock, Throwable, Long] =
+  ): ZIO[R with Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
       def setupStream(status: RefM[StreamSourceStatus]) =
         ZStream
