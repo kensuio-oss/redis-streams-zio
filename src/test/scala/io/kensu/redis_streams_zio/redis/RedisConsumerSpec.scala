@@ -467,7 +467,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
 
   private object TestData {
 
-    val config = new StreamConsumerConfig {
+    val config: StreamConsumerConfig = new StreamConsumerConfig {
 
       override val claiming: ClaimingConfig = ClaimingConfig(
         initialDelay      = 5.seconds,
@@ -488,9 +488,9 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
       override val consumerName: StreamConsumerName = StreamConsumerName("test-stream-consumer-name")
     }
 
-    val streamKey = StreamKey("test-event-key")
+    val streamKey: StreamKey = StreamKey("test-event-key")
 
-    val pendingReadGroupCorrectArgs =
+    val pendingReadGroupCorrectArgs: (StreamGroupName, StreamConsumerName, Int, Duration, ListGroupStrategy.Pending.type) =
       (
         config.groupName,
         config.consumerName,
@@ -499,7 +499,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         ListGroupStrategy.Pending
       )
 
-    val newReadGroupCorrectArgs =
+    val newReadGroupCorrectArgs: (StreamGroupName, StreamConsumerName, Int, Duration, ListGroupStrategy.New.type) =
       (
         config.groupName,
         config.consumerName,

@@ -13,6 +13,8 @@ import zio.duration.durationInt
 import zio.logging.Logging
 import zio.logging.slf4j.Slf4jLogger
 import zio.random.nextString
+import io.kensu.redis_streams_zio.services.producers.EventProducer
+import zio.random.Random
 
 object Producer extends App {
 
@@ -22,7 +24,7 @@ object Producer extends App {
       .provideCustomLayer(liveEnv)
       .exitCode
 
-  val sentNotification =
+  val sentNotification: ZIO[Has[NotificationsStreamProducerConfig] with Random with Has[EventProducer[StreamInstance.Notifications]],Throwable,Unit] =
     for {
       config <- getConfig[NotificationsStreamProducerConfig]
       str    <- nextString(10)

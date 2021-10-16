@@ -74,14 +74,14 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
   private object TestData {
 
-    val streamName     = StreamName("test-stream")
-    val testStreamKey  = StreamKey("create")
-    val testEvent      = TestEvent("Important delivery!")
-    val testEventBytes = Chunk.fromArray(testEvent.asBytes)
+    val streamName: StreamName     = StreamName("test-stream")
+    val testStreamKey: StreamKey  = StreamKey("create")
+    val testEvent: TestEvent      = TestEvent("Important delivery!")
+    val testEventBytes: Chunk[Byte] = Chunk.fromArray(testEvent.asBytes)
   }
 
   final case class TestEvent(msg: String) {
-    lazy val asBytes = msg.getBytes("UTF-8")
+    lazy val asBytes: Array[Byte] = msg.getBytes("UTF-8")
   }
 
   object TestEvent {

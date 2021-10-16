@@ -269,7 +269,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
   private object TestData {
 
-    val config = new StreamConsumerConfig {
+    val config: StreamConsumerConfig = new StreamConsumerConfig {
 
       override val claiming: ClaimingConfig = ClaimingConfig(
         initialDelay      = 5.seconds,
