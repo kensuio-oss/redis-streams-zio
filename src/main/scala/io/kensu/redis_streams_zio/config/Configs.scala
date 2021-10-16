@@ -1,8 +1,8 @@
 package io.kensu.redis_streams_zio.config
 
 import zio.{Has, Layer}
-import zio.config.ReadError
-import zio.config.magnolia.{descriptor, Descriptor}
+import zio.config._
+import zio.config.magnolia._
 import zio.config.typesafe.TypesafeConfig
 import zio.duration.Duration
 

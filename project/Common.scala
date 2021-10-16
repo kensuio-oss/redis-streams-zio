@@ -25,7 +25,7 @@ object Common {
           organization := "io.kensu",
           name := "redis-streams-zio",
           scalacOptions ++= Seq("-Yrangepos", "-Xsource:3"),
-          semanticdbVersion := "4.4.18",
+          semanticdbVersion := "4.4.28",
           scalaVersion := "2.13.6",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
