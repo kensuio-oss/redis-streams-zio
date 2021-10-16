@@ -11,9 +11,8 @@ import zio.logging._
 object RedisStaleEventsCollector {
 
   /**
-   * Builds the Redis claiming logic for problematic messages.
-   * The logic has to be delayed to not clash with stream processor, so we don't process very old
-   * pending messages and also ack them here in the same time.
+   * Builds the Redis claiming logic for problematic messages. The logic has to be delayed to not clash with stream
+   * processor, so we don't process very old pending messages and also ack them here in the same time.
    */
   def executeFor[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
     repeatStrategy: Option[Schedule[Any, Any, Unit]] = None

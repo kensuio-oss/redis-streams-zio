@@ -30,10 +30,14 @@ trait EventProducer[S <: StreamInstance] {
 
   /**
    * Publishes a message.
-   * @param streamKey key name under which to store the event
-   * @param event anything that satisfies EventPublishable type class
-   * @tparam E EventSerializable type class
-   * @return a computed message id
+   * @param streamKey
+   *   key name under which to store the event
+   * @param event
+   *   anything that satisfies EventPublishable type class
+   * @tparam E
+   *   EventSerializable type class
+   * @return
+   *   a computed message id
    */
   def publish[E: EventSerializable: Tag](
     streamKey: StreamKey,
@@ -64,18 +68,16 @@ final case class RedisEventProducer[S <: StreamInstance: Tag](
       val retryPolicy =
         Schedule.exponential(3.seconds) *> Schedule
           .recurs(3)
-          .onDecision({
+          .onDecision {
             case Decision.Done(_)                 => log.warn(s"An event is done retrying publishing")
             case Decision.Continue(attempt, _, _) => log.info(s"An event will be retried #${attempt + 1}")
-          })
+          }
 
       send.retry(retryPolicy).provide(env)
     }
 }
 
-/**
- * An additional, stream instance predefined definition for easier API usage and future refactoring.
- */
+/** An additional, stream instance predefined definition for easier API usage and future refactoring. */
 object NotificationsEventProducer extends Accessible[EventProducer[StreamInstance.Notifications]] {
 
   type NotificationsEventProducer = Has[EventProducer[StreamInstance.Notifications]]

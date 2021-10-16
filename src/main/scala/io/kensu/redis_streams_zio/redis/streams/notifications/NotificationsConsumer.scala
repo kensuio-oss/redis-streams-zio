@@ -52,7 +52,7 @@ object NotificationsConsumer {
       additionalWork(event)
         .as(id)
         .asSome
-        .catchAll({
+        .catchAll {
           case RetryableStreamError =>
             log
               .warn(s"StreamMessageId $id was not processed successfully, scheduled for pending")
@@ -62,7 +62,7 @@ object NotificationsConsumer {
               .throwable(s"StreamMessageId $id was not processed successfully and can't be retried", t)
               .as(id)
               .asSome
-        })
+        }
   }
 
   private def additionalWork(event: Event) = event match {

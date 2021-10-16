@@ -430,10 +430,10 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
                 repeatStrategy  = Schedule.forever
-                  .onDecision({
+                  .onDecision {
                     case Decision.Continue(attempt, _, _) if attempt == 1 => shutdownHook.succeed(())
                     case _                                                => ZIO.unit
-                  })
+                  }
                   .unit
               )
 
