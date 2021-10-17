@@ -7,9 +7,10 @@ import io.kensu.redis_streams_zio.redis.streams.{
   ListGroupStrategy,
   ReadGroupResult,
   RedisConsumer,
+  RedisStream,
   StreamInstance
 }
-import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
 import io.kensu.redis_streams_zio.redis.streams.RedisConsumer.StreamInput
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{StreamGroup, StreamMessageId}
@@ -457,7 +458,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
   ) =
     stream.mapM(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
 
-  private def testEnv(redisStreamMock: ULayer[NotificationsRedisStream]) =
+  private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
   private[this] case class TestEvent(

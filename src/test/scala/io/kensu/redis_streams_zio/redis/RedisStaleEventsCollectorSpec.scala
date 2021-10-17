@@ -1,18 +1,22 @@
 package io.kensu.redis_streams_zio.redis
 
-import io.kensu.redis_streams_zio.config._
-import io.kensu.redis_streams_zio.redis.streams.{RedisStaleEventsCollector, StreamInstance}
-import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
+import io.kensu.redis_streams_zio.config.*
+import io.kensu.redis_streams_zio.redis.streams.{
+  NotificationsRedisStream,
+  RedisStaleEventsCollector,
+  RedisStream,
+  StreamInstance
+}
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{PendingEntry, StreamMessageId}
-import zio._
+import zio.*
 import zio.clock.Clock
 import zio.duration.{durationInt, Duration}
 import zio.logging.Logging
-import zio.test.{DefaultRunnableSpec, _}
-import zio.test.Assertion._
+import zio.test.{DefaultRunnableSpec, *}
+import zio.test.Assertion.*
 import zio.test.environment.{TestClock, TestEnvironment}
-import zio.test.mock.Expectation._
+import zio.test.mock.Expectation.*
 
 object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
@@ -264,7 +268,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
     ) @@ TestAspect.timeout(30.seconds)
   }
 
-  private def testEnv(redisStreamMock: ULayer[NotificationsRedisStream]) =
+  private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
   private object TestData {

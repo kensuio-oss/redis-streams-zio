@@ -15,8 +15,8 @@ object Common {
     "-language:postfixOps",
     "-explain",
     "-new-syntax",
-    "-rewrite"
-//    "-Werror"
+//    "-rewrite"
+    "-Werror"
   )
 
   implicit class ProjectFrom(project: Project) {
@@ -31,7 +31,7 @@ object Common {
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
           Compile / console / scalacOptions --= Seq("-Werror"),
-          scalacOptions ++= Seq("-target:11"),
+          scalacOptions ++= Seq("-release:11"),
           javacOptions ++= Seq("-source", "11", "-target", "11"),
           Global / cancelable := true,
           fork := true,

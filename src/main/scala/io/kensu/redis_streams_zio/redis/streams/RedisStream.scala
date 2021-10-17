@@ -214,8 +214,9 @@ object RedisStream {
 /** An additional, stream instance predefined definition for easier API usage and future refactoring. */
 object NotificationsRedisStream extends Accessible[RedisStream[StreamInstance.Notifications]] {
 
-  type NotificationsRedisStream = Has[RedisStream[StreamInstance.Notifications]]
-
-  val redisson: URLayer[Has[StreamInstance.Notifications] & RedisClient, NotificationsRedisStream] =
+  val redisson: URLayer[
+    Has[StreamInstance.Notifications] & RedisClient,
+    Has[RedisStream[StreamInstance.Notifications]]
+  ] =
     (RedissonRedisStream[StreamInstance.Notifications](_, _)).toLayer
 }

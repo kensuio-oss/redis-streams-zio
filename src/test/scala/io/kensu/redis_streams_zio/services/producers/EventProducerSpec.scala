@@ -3,25 +3,25 @@ package io.kensu.redis_streams_zio.services.producers
 import java.util.concurrent.TimeUnit
 
 import io.kensu.redis_streams_zio.config.{StreamKey, StreamName}
-import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
-import io.kensu.redis_streams_zio.redis.streams.StreamInstance
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
+import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.StreamMessageId
-import zio.{Chunk, ULayer, ZLayer}
-import zio.clock._
-import zio.duration._
+import zio.{Chunk, Has, ULayer, ZLayer}
+import zio.clock.*
+import zio.duration.*
 import zio.logging.Logging
-import zio.test._
-import zio.test.Assertion._
+import zio.test.*
+import zio.test.Assertion.*
 import zio.test.environment.{TestClock, TestEnvironment}
-import zio.test.mock.Expectation._
+import zio.test.mock.Expectation.*
 
 object EventProducerSpec extends DefaultRunnableSpec {
 
   import TestData._
 
-  private def testEnv(redisStreamMock: ULayer[NotificationsRedisStream]) =
-    redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore >>> NotificationsEventProducer.redis
+  private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
+    (redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore) >>> NotificationsEventProducer.redis
 
   override def spec: ZSpec[TestEnvironment, Failure] =
     suite("EventProducer.redis")(
