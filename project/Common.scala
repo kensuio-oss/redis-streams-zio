@@ -12,8 +12,8 @@ object Common {
     "-language:existentials",
     "-language:higherKinds",
     "-language:implicitConversions",
-    "-language:postfixOps"
-    //"-explain-types",
+    "-language:postfixOps",
+    "-explain"
 //    "-Werror"
   )
 
@@ -24,14 +24,13 @@ object Common {
         .settings(
           organization := "io.kensu",
           name := "redis-streams-zio",
-          scalacOptions ++= Seq("-Yrangepos", "-Xsource:3"),
           semanticdbVersion := "4.4.28",
-          scalaVersion := "2.13.6",
+          scalaVersion := "3.0.2",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
           Compile / console / scalacOptions --= Seq("-Werror"),
-          //scalacOptions ++= Seq("-Xtarget:11"),
-          javacOptions ++= Seq("--release", "11"),
+          scalacOptions ++= Seq("-target:11"),
+          javacOptions ++= Seq("-source", "11", "-target", "11"),
           Global / cancelable := true,
           fork := true,
           Test / parallelExecution := true,

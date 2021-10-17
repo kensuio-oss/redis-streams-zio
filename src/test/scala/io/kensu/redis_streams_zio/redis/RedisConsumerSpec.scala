@@ -490,7 +490,13 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
 
     val streamKey: StreamKey = StreamKey("test-event-key")
 
-    val pendingReadGroupCorrectArgs: (StreamGroupName, StreamConsumerName, Int, Duration, ListGroupStrategy.Pending.type) =
+    val pendingReadGroupCorrectArgs: (
+      StreamGroupName,
+      StreamConsumerName,
+      Int,
+      Duration,
+      ListGroupStrategy.Pending.type
+    ) =
       (
         config.groupName,
         config.consumerName,

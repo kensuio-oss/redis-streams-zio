@@ -74,9 +74,9 @@ object EventProducerSpec extends DefaultRunnableSpec {
 
   private object TestData {
 
-    val streamName: StreamName     = StreamName("test-stream")
-    val testStreamKey: StreamKey  = StreamKey("create")
-    val testEvent: TestEvent      = TestEvent("Important delivery!")
+    val streamName: StreamName      = StreamName("test-stream")
+    val testStreamKey: StreamKey    = StreamKey("create")
+    val testEvent: TestEvent        = TestEvent("Important delivery!")
     val testEventBytes: Chunk[Byte] = Chunk.fromArray(testEvent.asBytes)
   }
 

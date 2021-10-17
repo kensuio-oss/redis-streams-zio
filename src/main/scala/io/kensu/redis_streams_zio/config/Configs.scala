@@ -1,9 +1,10 @@
 package io.kensu.redis_streams_zio.config
 
 import zio.{Has, Layer}
-import zio.config._
-import zio.config.magnolia._
+import zio.config.ConfigDescriptor
+import zio.config.magnolia.*
 import zio.config.typesafe.TypesafeConfig
+import zio.config.ReadError
 import zio.duration.Duration
 
 final case class RootConfig(
@@ -33,37 +34,49 @@ final case class RedisConfig(
   password: String
 )
 
-final case class StreamName(value: String) extends AnyVal {
+final case class StreamName(value: String) {
   override def toString: String = value
 }
 
-object StreamName {
-  implicit val descriptor: Descriptor[StreamName] = Descriptor[String].transform(StreamName(_), _.value)
-}
+//object StreamName {
+//
+//  implicit val desc: Any =
+//    ConfigDescriptor.string.transform(StreamName(_), _.value)
+//}
 
-final case class StreamGroupName(value: String) extends AnyVal {
+final case class StreamGroupName(value: String) {
   override def toString: String = value
 }
 
-object StreamGroupName {
-  implicit val descriptor: Descriptor[StreamGroupName] = Descriptor[String].transform(StreamGroupName(_), _.value)
-}
+//object StreamGroupName {
+//
+//  implicit val desc: ConfigDescriptor[StreamGroupName] =
+//    ConfigDescriptor.string.transform(StreamGroupName(_), _.value)
+//}
 
-final case class StreamConsumerName(value: String) extends AnyVal {
+final case class StreamConsumerName(value: String) {
   override def toString: String = value
 }
 
-object StreamConsumerName {
-  implicit val descriptor: Descriptor[StreamConsumerName] = Descriptor[String].transform(StreamConsumerName(_), _.value)
-}
+//object StreamConsumerName {
+//
+//  implicit val desc: ConfigDescriptor[StreamConsumerName] =
+//    ConfigDescriptor.string.transform(StreamConsumerName(_), _.value)
+//}
 
-final case class StreamKey(value: String) extends AnyVal {
+final case class StreamKey(value: String) {
   override def toString: String = value
 }
 
-object StreamKey {
-  implicit val descriptor: Descriptor[StreamKey] = Descriptor[String].transform(StreamKey(_), _.value)
-}
+//extension (c: StreamKey) {
+//  def desc: ConfigDescriptor[StreamKey] = ConfigDescriptor.string.transform(StreamKey(_), _.value)
+//}
+
+//object StreamKey {
+//
+//  implicit val desc: ConfigDescriptor[StreamKey] =
+//    ConfigDescriptor.string.transform(StreamKey(_), _.value)
+//}
 
 final case class ClaimingConfig(
   initialDelay: Duration,

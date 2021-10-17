@@ -24,7 +24,11 @@ object Producer extends App {
       .provideCustomLayer(liveEnv)
       .exitCode
 
-  val sentNotification: ZIO[Has[NotificationsStreamProducerConfig] with Random with Has[EventProducer[StreamInstance.Notifications]],Throwable,Unit] =
+  val sentNotification: ZIO[
+    Has[NotificationsStreamProducerConfig] with Random with Has[EventProducer[StreamInstance.Notifications]],
+    Throwable,
+    Unit
+  ] =
     for {
       config <- getConfig[NotificationsStreamProducerConfig]
       str    <- nextString(10)

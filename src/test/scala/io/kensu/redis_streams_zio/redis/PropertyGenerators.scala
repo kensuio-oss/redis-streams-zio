@@ -21,6 +21,6 @@ object PropertyGenerators {
         ReadGroupResult(msgId, Chunk(ReadGroupData(streamKey, Chunk.fromArray(msg.getBytes("UTF-8")))))
     }
 
-  def uniqueRedisData(streamKey: StreamKey): Gen[Random with Sized,(ReadGroupResult, ReadGroupResult)] =
+  def uniqueRedisData(streamKey: StreamKey): Gen[Random with Sized, (ReadGroupResult, ReadGroupResult)] =
     (redisData(streamKey) <&> redisData(streamKey)).filter { case (a, b) => a.messageId != b.messageId }
 }

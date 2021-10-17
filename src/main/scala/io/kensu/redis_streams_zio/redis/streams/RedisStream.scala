@@ -16,15 +16,15 @@ import scala.jdk.CollectionConverters._
 sealed trait CreateGroupStrategy
 
 object CreateGroupStrategy {
-  final case object Newest extends CreateGroupStrategy
-  final case object All extends CreateGroupStrategy
+  case object Newest extends CreateGroupStrategy
+  case object All extends CreateGroupStrategy
 }
 
 sealed trait ListGroupStrategy
 
 object ListGroupStrategy {
-  final case object New extends ListGroupStrategy
-  final case object Pending extends ListGroupStrategy
+  case object New extends ListGroupStrategy
+  case object Pending extends ListGroupStrategy
 }
 
 final case class ReadGroupData(

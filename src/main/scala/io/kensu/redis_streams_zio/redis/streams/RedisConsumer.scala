@@ -28,7 +28,7 @@ object RedisConsumer {
     ZIO.service[C].flatMap { config =>
       def setupStream(status: RefM[StreamSourceStatus]) =
         ZStream
-          .fromEffect(getEvents(status))
+          .fromEffect(getEvents[Nothing, S, C](status))
           .flattenChunks
           .via(eventsProcessor)
           .mapM(acknowledge[S, C])

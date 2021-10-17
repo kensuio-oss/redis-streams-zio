@@ -2,6 +2,7 @@
 .idea
 .bloop
 .metals/
+metals.sbt
 target
 *.log
 docker/docker-volumes
