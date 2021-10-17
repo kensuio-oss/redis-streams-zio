@@ -35,11 +35,11 @@ object RedisConsumer {
           .repeat(repeatStrategy)
           .haltWhen(shutdownHook)
 
-      (for {
+      (for
         streamStatus <- initialStreamStatus
         _            <- assureStreamGroup
         result       <- setupStream(streamStatus).runSum
-      } yield result)
+      yield result)
         .tapCause(t => log.error(s"Failed processing ${config.streamName} stream, will be retried", t))
         .retry(Scheduling.exponentialBackoff(config.retry.min, config.retry.max, config.retry.factor))
     }
@@ -59,15 +59,15 @@ object RedisConsumer {
   private def assureStreamGroup[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag] =
     getConfig[C].flatMap { config =>
       val groupName = config.groupName
-      for {
+      for
         _      <- log.info(s"Looking for Redis group $groupName")
         exists <- RedisStream.listGroups[S].map(_.exists(_.getName == groupName.value))
-        res    <- if (exists) log.info(s"Redis consumer group $groupName already created")
+        res    <- if exists then log.info(s"Redis consumer group $groupName already created")
                   else {
                     log.info(s"Creating Redis consumer group $groupName") *>
                       RedisStream.createGroup[S](groupName, CreateGroupStrategy.Newest)
                   }
-      } yield res
+      yield res
     }
 
   private def getEvents[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
@@ -79,7 +79,7 @@ object RedisConsumer {
 
       def loadEvents(checkPending: Boolean, checkedMessages: Set[StreamMessageId]) = {
         val (logMsgType, msgType) =
-          if (checkPending) "pending" -> ListGroupStrategy.Pending
+          if checkPending then "pending" -> ListGroupStrategy.Pending
           else "new" -> ListGroupStrategy.New
         val commonLogMsg          = s"$logMsgType events for group $group and consumer $consumer"
 
@@ -87,7 +87,7 @@ object RedisConsumer {
           RedisStream
             .readGroup[S](group, consumer, 10, config.readTimeout, msgType)
             .map { events =>
-              if (checkPending) events.filterNot(e => checkedMessages.contains(e.messageId))
+              if checkPending then events.filterNot(e => checkedMessages.contains(e.messageId))
               else events
             }
             .tap(result => log.info(s"Got ${result.size} $commonLogMsg").when(result.nonEmpty))
@@ -100,13 +100,13 @@ object RedisConsumer {
           .isBefore(currentInstant)
 
       streamStatus.modify { oldStatus =>
-        for {
+        for
           now         <- clock.instant
           checkPending = shouldCheckPending(oldStatus, now)
           events      <- loadEvents(checkPending, oldStatus.checkedMessages)
-        } yield {
+        yield {
           val newStatus =
-            if (checkPending) {
+            if checkPending then {
               StreamSourceStatus(
                 lastPendingAttempt = now,
                 keepPending        = events.nonEmpty,

@@ -26,11 +26,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
           NotificationsRedisStreamMock.ListPending(equalTo(config.groupName, 100), value(Chunk.empty)).atMost(0)
 
         val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
-        (for {
+        (for
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay.minusMillis(1))
           _      <- forked.interrupt
-        } yield assertCompletes)
+        yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("begin processing after initial delay") {
@@ -39,11 +39,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
         val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
-        (for {
+        (for
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
-        } yield assertCompletes)
+        yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("claim only messages with exceeded idle time from other consumers") {
@@ -78,11 +78,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
         val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
-        (for {
+        (for
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
-        } yield assertCompletes)
+        yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("claim only half of suitable messages") {
@@ -116,11 +116,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
         val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
-        (for {
+        (for
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
-        } yield assertCompletes)
+        yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("can keep repeating the claiming process") {
@@ -170,11 +170,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
             Some(Schedule.once)
           )
 
-        (for {
+        (for
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.join
-        } yield assertCompletes)
+        yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("acknowledge only messages with exceeded number of deliveries") {
@@ -207,11 +207,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
 
         val collector = RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, StreamConsumerConfig]()
 
-        (for {
+        (for
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
-        } yield assertCompletes)
+        yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
       testM("can keep repeating the acknowledge process") {
@@ -254,11 +254,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
         val collector = RedisStaleEventsCollector
           .executeFor[StreamInstance.Notifications, StreamConsumerConfig](Some(Schedule.once))
 
-        (for {
+        (for
           forked <- collector.fork
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.join
-        } yield assertCompletes)
+        yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       }
     ) @@ TestAspect.timeout(30.seconds)

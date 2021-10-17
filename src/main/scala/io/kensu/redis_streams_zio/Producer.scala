@@ -29,11 +29,11 @@ object Producer extends App {
     Throwable,
     Unit
   ] =
-    for {
+    for
       config <- getConfig[NotificationsStreamProducerConfig]
       str    <- nextString(10)
       _      <- NotificationsEventProducer(_.publish(config.addKey, str))
-    } yield ()
+    yield ()
 
   private val liveEnv = {
     val appConfig      = Configs.appConfig

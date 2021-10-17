@@ -206,7 +206,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise, uniqueRedisData(streamKey)) {
           case (shutdownHook, (redisData1, redisData2)) =>
             val eventProcessor: TestEvent => UIO[Option[StreamMessageId]] = e => {
-              if (e.id == redisData1.messageId) ZIO.none
+              if e.id == redisData1.messageId then ZIO.none
               else ZIO.succeed(redisData2.messageId).asSome
             }
 
@@ -256,10 +256,10 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                     .unit
                 )
 
-            (for {
+            (for
               clock  <- ZIO.service[TestClock.Service]
               result <- stream(clock)
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -284,11 +284,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -316,11 +316,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -349,11 +349,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -390,11 +390,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(1L)))
+            yield assert(result)(equalTo(1L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -437,11 +437,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   .unit
               )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- shutdownHook.await
               _      <- forked.join
-            } yield assertCompletes)
+            yield assertCompletes)
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       }

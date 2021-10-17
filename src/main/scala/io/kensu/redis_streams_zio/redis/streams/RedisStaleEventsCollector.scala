@@ -44,7 +44,7 @@ object RedisStaleEventsCollector {
                 .filter(_.getConsumerName != consumer.value)
                 .filter(_.getIdleTime >= conf.maxIdleTime.toMillis)
             )
-            if (all.size > 1) all.take(all.size / 2) else all
+            if all.size > 1 then all.take(all.size / 2) else all
           }.map(_.getId)
           acknowledge(deliveriesExceededMessages.map(_.getId)) *> claim(messagesToClaim)
         }

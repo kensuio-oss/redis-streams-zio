@@ -115,7 +115,7 @@ final case class RedissonRedisStream[S <: StreamInstance: Tag](
           )
       ).flatMap { messages =>
         ZIO.effect {
-          if (messages == null) Chunk.empty
+          if messages == null then Chunk.empty
           else {
             Chunk.fromIterable(messages.asScala).map {
               case (msgId, m) =>

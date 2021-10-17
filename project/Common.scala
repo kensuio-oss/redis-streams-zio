@@ -13,7 +13,9 @@ object Common {
     "-language:higherKinds",
     "-language:implicitConversions",
     "-language:postfixOps",
-    "-explain"
+    "-explain",
+    "-new-syntax",
+    "-rewrite"
 //    "-Werror"
   )
 
