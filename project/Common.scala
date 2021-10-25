@@ -9,14 +9,16 @@ object Common {
     "-unchecked",
     "-deprecation",
     "-feature",
-    "-language:existentials",
-    "-language:higherKinds",
-    "-language:implicitConversions",
-    "-language:postfixOps",
-    "-explain",
-    "-new-syntax",
+//    "-language:existentials",
+//    "-language:higherKinds",
+//    "-language:implicitConversions",
+//    "-language:postfixOps",
+    "-explain"
+//    "-new-syntax"
+//    "-source:future-migration",
 //    "-rewrite"
-    "-Werror"
+//"-language:strictEquality",
+//    "-Werror"
   )
 
   implicit class ProjectFrom(project: Project) {
@@ -27,7 +29,8 @@ object Common {
           organization := "io.kensu",
           name := "redis-streams-zio",
           semanticdbVersion := "4.4.28",
-          scalaVersion := "3.0.2",
+          scalaVersion := "3.1.0",
+//          scalaVersion := "3.0.2",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
           Compile / console / scalacOptions --= Seq("-Werror"),

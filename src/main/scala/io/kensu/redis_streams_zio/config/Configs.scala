@@ -1,8 +1,11 @@
 package io.kensu.redis_streams_zio.config
 
 import zio.{Has, Layer}
-import zio.config.ConfigDescriptor
-import zio.config.magnolia.*
+//import zio.config.{given, _}
+import zio.config._
+//import zio.config.TupleConversion.{given, _}
+import zio.config.ConfigDescriptor._
+import zio.config.magnolia.{descriptor, Descriptor}
 import zio.config.typesafe.TypesafeConfig
 import zio.config.ReadError
 import zio.duration.Duration
@@ -38,45 +41,44 @@ final case class StreamName(value: String) {
   override def toString: String = value
 }
 
-//object StreamName {
-//
-//  implicit val desc: Any =
-//    ConfigDescriptor.string.transform(StreamName(_), _.value)
-//}
+object StreamName {
+
+  implicit val desc: Descriptor[StreamName] =
+    Descriptor.from(string.transform(StreamName(_), _.value))
+}
 
 final case class StreamGroupName(value: String) {
   override def toString: String = value
 }
 
-//object StreamGroupName {
-//
-//  implicit val desc: ConfigDescriptor[StreamGroupName] =
-//    ConfigDescriptor.string.transform(StreamGroupName(_), _.value)
-//}
+object StreamGroupName {
+
+  implicit val desc: Descriptor[StreamGroupName] =
+//    Descriptor.from(string.to[StreamGroupName])
+    Descriptor.from(string.transform(StreamGroupName(_), _.value))
+}
 
 final case class StreamConsumerName(value: String) {
   override def toString: String = value
 }
 
-//object StreamConsumerName {
-//
-//  implicit val desc: ConfigDescriptor[StreamConsumerName] =
-//    ConfigDescriptor.string.transform(StreamConsumerName(_), _.value)
-//}
+object StreamConsumerName {
+
+  implicit val desc: Descriptor[StreamConsumerName] =
+//    Descriptor.from(string.to[StreamConsumerName])
+    Descriptor.from(string.transform(StreamConsumerName(_), _.value))
+}
 
 final case class StreamKey(value: String) {
   override def toString: String = value
 }
 
-//extension (c: StreamKey) {
-//  def desc: ConfigDescriptor[StreamKey] = ConfigDescriptor.string.transform(StreamKey(_), _.value)
-//}
+object StreamKey {
 
-//object StreamKey {
-//
-//  implicit val desc: ConfigDescriptor[StreamKey] =
-//    ConfigDescriptor.string.transform(StreamKey(_), _.value)
-//}
+  implicit val desc: Descriptor[StreamKey] =
+    Descriptor.from(string.transform(StreamKey(_), _.value))
+//    Descriptor.from(string.to[StreamKey])
+}
 
 final case class ClaimingConfig(
   initialDelay: Duration,
