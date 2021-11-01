@@ -66,7 +66,7 @@ trait RedisStream[S <: StreamInstance] {
   def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId]
 }
 
-final case class RedissonRedisStream[S <: StreamInstance: Tag](
+private[streams] final class RedissonRedisStream[S <: StreamInstance](
   instance: S,
   redisson: RedissonClient
 ) extends RedisStream[S] {
@@ -165,48 +165,49 @@ final case class RedissonRedisStream[S <: StreamInstance: Tag](
 
 object RedisStream {
 
-  def streamInstance[S <: StreamInstance: Tag]: RIO[Has[RedisStream[S]], StreamInstance] =
+  def streamInstance[S <: StreamInstance](implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], StreamInstance] =
     ZIO.serviceWith[RedisStream[S]](_.streamInstance)
 
-  def listGroups[S <: StreamInstance: Tag]: RIO[Has[RedisStream[S]], Chunk[StreamGroup]] =
+  def listGroups[S <: StreamInstance](implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], Chunk[StreamGroup]] =
     ZIO.serviceWith[RedisStream[S]](_.listGroups)
 
-  def createGroup[S <: StreamInstance: Tag](
+  def createGroup[S <: StreamInstance](
     groupName: StreamGroupName,
     strategy: CreateGroupStrategy
-  ): RIO[Has[RedisStream[S]], Unit] =
+  )(implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], Unit] =
     ZIO.serviceWith[RedisStream[S]](_.createGroup(groupName, strategy))
 
-  def readGroup[S <: StreamInstance: Tag](
+  def readGroup[S <: StreamInstance](
     groupName: StreamGroupName,
     consumerName: StreamConsumerName,
     count: Int,
     timeout: Duration,
     strategy: ListGroupStrategy
-  ): RIO[Has[RedisStream[S]], Chunk[ReadGroupResult]] =
+  )(implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], Chunk[ReadGroupResult]] =
     ZIO.serviceWith[RedisStream[S]](_.readGroup(groupName, consumerName, count, timeout, strategy))
 
-  def ack[S <: StreamInstance: Tag](
+  def ack[S <: StreamInstance](
     groupName: StreamGroupName,
     ids: NonEmptyChunk[StreamMessageId]
-  ): RIO[Has[RedisStream[S]], Long] =
+  )(implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], Long] =
     ZIO.serviceWith[RedisStream[S]](_.ack(groupName, ids))
 
-  def fastClaim[S <: StreamInstance: Tag](
+  def fastClaim[S <: StreamInstance](
     groupName: StreamGroupName,
     consumerName: StreamConsumerName,
     maxIdleTime: Duration,
     ids: NonEmptyChunk[StreamMessageId]
-  ): RIO[Has[RedisStream[S]], Chunk[StreamMessageId]] =
+  )(implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], Chunk[StreamMessageId]] =
     ZIO.serviceWith[RedisStream[S]](_.fastClaim(groupName, consumerName, maxIdleTime, ids))
 
-  def listPending[S <: StreamInstance: Tag](
+  def listPending[S <: StreamInstance](
     groupName: StreamGroupName,
     count: Int
-  ): RIO[Has[RedisStream[S]], Chunk[PendingEntry]] =
+  )(implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], Chunk[PendingEntry]] =
     ZIO.serviceWith[RedisStream[S]](_.listPending(groupName, count))
 
-  def add[S <: StreamInstance: Tag](key: StreamKey, payload: Chunk[Byte]): RIO[Has[RedisStream[S]], StreamMessageId] =
+  def add[S <: StreamInstance](key: StreamKey, payload: Chunk[Byte])(implicit
+  ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], StreamMessageId] =
     ZIO.serviceWith[RedisStream[S]](_.add(key, payload))
 
 }
@@ -218,5 +219,5 @@ object NotificationsRedisStream extends Accessible[RedisStream[StreamInstance.No
     Has[StreamInstance.Notifications] & RedisClient,
     Has[RedisStream[StreamInstance.Notifications]]
   ] =
-    (RedissonRedisStream[StreamInstance.Notifications](_, _)).toLayer
+    (new RedissonRedisStream[StreamInstance.Notifications](_, _)).toLayer
 }

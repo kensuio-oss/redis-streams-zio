@@ -10,13 +10,13 @@ object Dependencies {
   val zio = Seq(
     "dev.zio" %% "zio"                 % Version.zio,
     "dev.zio" %% "zio-streams"         % Version.zio,
-    "dev.zio" %% "zio-logging-slf4j"   % "0.5.12",
+    "dev.zio" %% "zio-logging-slf4j"   % "0.5.13",
     "dev.zio" %% "zio-config-typesafe" % Version.zioConfig,
     "dev.zio" %% "zio-config-magnolia" % Version.zioConfig,
     "dev.zio" %% "zio-test-sbt"        % Version.zio % Test
   )
 
-  val redisson = Seq("org.redisson" % "redisson" % "3.16.3")
+  val redisson = Seq("org.redisson" % "redisson" % "3.16.4")
 
   val logback = Seq(
     "ch.qos.logback" % "logback-classic"  % "1.2.6",

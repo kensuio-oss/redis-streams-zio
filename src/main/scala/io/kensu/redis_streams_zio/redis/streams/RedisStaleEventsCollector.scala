@@ -14,8 +14,11 @@ object RedisStaleEventsCollector {
    * Builds the Redis claiming logic for problematic messages. The logic has to be delayed to not clash with stream
    * processor, so we don't process very old pending messages and also ack them here in the same time.
    */
-  def executeFor[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  def executeFor[S <: StreamInstance, C <: StreamConsumerConfig](
     repeatStrategy: Option[Schedule[Any, Any, Unit]] = None
+  )(
+    implicit ts: Tag[RedisStream[S]],
+    tscc: Tag[C]
   ): ZIO[Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Long] =
     getConfig[C].flatMap { config =>
       getPendingEvents
@@ -29,7 +32,10 @@ object RedisStaleEventsCollector {
         .map(_.sum)
     }
 
-  private def getPendingEvents[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag] =
+  private def getPendingEvents[S <: StreamInstance, C <: StreamConsumerConfig](
+    implicit ts: Tag[RedisStream[S]],
+    tscc: Tag[C]
+  ) =
     getConfig[C].flatMap { config =>
       val group    = config.groupName
       val consumer = config.consumerName
@@ -50,9 +56,9 @@ object RedisStaleEventsCollector {
         }
     }
 
-  private def acknowledge[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  private def acknowledge[S <: StreamInstance, C <: StreamConsumerConfig](
     messageIds: Chunk[StreamMessageId]
-  ) =
+  )(implicit ts: Tag[RedisStream[S]], tscc: Tag[C]) =
     getConfig[C].flatMap { config =>
       val group        = config.groupName
       val batchSize    = messageIds.size
@@ -70,9 +76,9 @@ object RedisStaleEventsCollector {
       }
     }
 
-  private def claim[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  private def claim[S <: StreamInstance, C <: StreamConsumerConfig](
     messageIds: Chunk[StreamMessageId]
-  ) =
+  )(implicit ts: Tag[RedisStream[S]], tscc: Tag[C]) =
     getConfig[C].flatMap { config =>
       val group        = config.groupName
       val consumer     = config.consumerName

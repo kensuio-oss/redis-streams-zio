@@ -13,17 +13,20 @@ import zio.stream.ZStream
 
 object RedisConsumer {
 
-  //TODO replace with &
+  // TODO replace with &
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
     ZStream[Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
 
   type StreamOutput[R, S <: StreamInstance, C <: StreamConsumerConfig] =
     ZStream[R with Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
 
-  def executeFor[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  def executeFor[R, S <: StreamInstance, C <: StreamConsumerConfig](
     shutdownHook: Promise[Throwable, Unit],
     eventsProcessor: StreamInput[S, C] => StreamOutput[R, S, C],
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
+  )(
+    implicit ts: Tag[RedisStream[S]],
+    tscc: Tag[C]
   ): ZIO[R with Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
       def setupStream(status: RefM[StreamSourceStatus]) =
@@ -56,7 +59,10 @@ object RedisConsumer {
         )
       )
 
-  private def assureStreamGroup[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag] =
+  private def assureStreamGroup[S <: StreamInstance, C <: StreamConsumerConfig](
+    implicit ts: Tag[RedisStream[S]],
+    tscc: Tag[C]
+  ) =
     getConfig[C].flatMap { config =>
       val groupName = config.groupName
       for
@@ -70,9 +76,9 @@ object RedisConsumer {
       yield res
     }
 
-  private def getEvents[R, S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  private def getEvents[R, S <: StreamInstance, C <: StreamConsumerConfig](
     streamStatus: RefM[StreamSourceStatus]
-  ) =
+  )(implicit ts: Tag[RedisStream[S]], tscc: Tag[C]) =
     getConfig[C].flatMap { config =>
       val group    = config.groupName
       val consumer = config.consumerName
@@ -118,7 +124,10 @@ object RedisConsumer {
       }
     }
 
-  private def acknowledge[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](msgId: Option[StreamMessageId]) =
+  private def acknowledge[S <: StreamInstance, C <: StreamConsumerConfig](msgId: Option[StreamMessageId])(
+    implicit ts: Tag[RedisStream[S]],
+    tscc: Tag[C]
+  ) =
     getConfig[C].flatMap { config =>
       val commonLogMsg = s"for group ${config.groupName} and consumer ${config.consumerName}"
       msgId match {

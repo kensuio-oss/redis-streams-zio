@@ -43,8 +43,7 @@ final case class StreamName(value: String) {
 
 object StreamName {
 
-  implicit val desc: Descriptor[StreamName] =
-    Descriptor.from(string.transform(StreamName(_), _.value))
+  given Descriptor[StreamName] = Descriptor.from(string.to[StreamName])
 }
 
 final case class StreamGroupName(value: String) {
@@ -53,9 +52,7 @@ final case class StreamGroupName(value: String) {
 
 object StreamGroupName {
 
-  implicit val desc: Descriptor[StreamGroupName] =
-//    Descriptor.from(string.to[StreamGroupName])
-    Descriptor.from(string.transform(StreamGroupName(_), _.value))
+  given Descriptor[StreamGroupName] = Descriptor.from(string.to[StreamGroupName])
 }
 
 final case class StreamConsumerName(value: String) {
@@ -64,9 +61,7 @@ final case class StreamConsumerName(value: String) {
 
 object StreamConsumerName {
 
-  implicit val desc: Descriptor[StreamConsumerName] =
-//    Descriptor.from(string.to[StreamConsumerName])
-    Descriptor.from(string.transform(StreamConsumerName(_), _.value))
+  given Descriptor[StreamConsumerName] = Descriptor.from(string.to[StreamConsumerName])
 }
 
 final case class StreamKey(value: String) {
@@ -75,9 +70,7 @@ final case class StreamKey(value: String) {
 
 object StreamKey {
 
-  implicit val desc: Descriptor[StreamKey] =
-    Descriptor.from(string.transform(StreamKey(_), _.value))
-//    Descriptor.from(string.to[StreamKey])
+  given Descriptor[StreamKey] = Descriptor.from(string.to[StreamKey])
 }
 
 final case class ClaimingConfig(

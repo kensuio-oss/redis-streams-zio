@@ -49,7 +49,7 @@ object EventProducerSpec extends DefaultRunnableSpec {
           (for
             timeBefore <- currentTime(TimeUnit.SECONDS)
             forked     <- NotificationsEventProducer(_.publish(testStreamKey, testEvent)).run.fork
-            _          <- TestClock.adjust(21.seconds) //3 retries for 3 sec exponential * 2
+            _          <- TestClock.adjust(21.seconds) // 3 retries for 3 sec exponential * 2
             msg        <- forked.join
             timeAfter  <- currentTime(TimeUnit.SECONDS)
           yield {
