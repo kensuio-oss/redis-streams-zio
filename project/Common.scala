@@ -14,11 +14,11 @@ object Common {
 //    "-language:implicitConversions",
 //    "-language:postfixOps",
     "-explain",
-//    "-new-syntax", "-rewrite" //First we need to use -new-syntax with rewrite, in the 2nd step 3.0-migration
-    "-indent",
-    "-rewrite"
+    "-new-syntax", // First we need to use -new-syntax with rewrite, in the 2nd step 3.0-migration // Require `then` and `do` in control expressions.
+//    "-indent", // Once done, comment out // Together with -rewrite, remove {...} syntax when possible due to significant indentation.
+//    "-rewrite",
 //    "-source:3.0-migration", //Supports both new and old keywords?
-    // "-source:future-migration" // Supports given/using etc?
+    "-source:future-migration" // Supports given/using etc?
     // "-language:strictEquality",
 //    "-Werror"
   )
@@ -32,7 +32,6 @@ object Common {
           name := "redis-streams-zio",
           semanticdbVersion := "4.4.28",
           scalaVersion := "3.1.0",
-//          scalaVersion := "3.0.2",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
           Compile / console / scalacOptions --= Seq("-Werror"),

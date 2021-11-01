@@ -13,9 +13,12 @@ import zio.clock.Clock
 
 object NotificationsConsumer:
 
-  def run(shutdownHook: Promise[Throwable, Unit]): ZIO[Logging with Has[NotificationsStreamConsumerConfig] with Has[
-    RedisStream[StreamInstance.Notifications]
-  ] with Has[NotificationsStreamConsumerConfig] with Logging with Clock, Throwable, Long] =
+  def run(shutdownHook: Promise[Throwable, Unit]): ZIO[
+    Logging & Has[NotificationsStreamConsumerConfig] &
+      Has[RedisStream[StreamInstance.Notifications]] & Has[NotificationsStreamConsumerConfig] & Logging & Clock,
+    Throwable,
+    Long
+  ] =
     log.locally(Name(List(getClass.getName))) {
       RedisConsumer.executeFor[
         Has[NotificationsStreamConsumerConfig],

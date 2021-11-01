@@ -11,7 +11,7 @@ import zio.logging.*
 object RedisStaleEventsCollector:
 
   /**
-   * Builds the Redis claiming logic for problematic messages. The logic has to be delayed to not clash with stream
+   * Builds the Redis claiming logic for problematic messages. The logic has to be delayed to not clash & stream
    * processor, so we don't process very old pending messages and also ack them here in the same time.
    */
   def executeFor[S <: StreamInstance, C <: StreamConsumerConfig](
@@ -19,7 +19,7 @@ object RedisStaleEventsCollector:
   )(
     implicit ts: Tag[RedisStream[S]],
     tscc: Tag[C]
-  ): ZIO[Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Long] =
+  ): ZIO[Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Long] =
     getConfig[C].flatMap { config =>
       getPendingEvents
         .repeat(

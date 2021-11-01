@@ -20,10 +20,10 @@ import zio.test.mock.Expectation.*
 
 object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec:
 
-  import TestData._
+  import TestData.*
 
   override val spec: ZSpec[TestEnvironment, Failure] =
-    import zio.duration._
+    import zio.duration.*
     suite("RedisZCollector.executeFor")(
       testM("does not begin processing before initial delay") {
         val redisStreamMock =
@@ -50,7 +50,7 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec:
         yield assertCompletes)
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       },
-      testM("claim only messages with exceeded idle time from other consumers") {
+      testM("claim only messages & exceeded idle time from other consumers") {
         val goodEntry                          = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
         val otherConsumerExceededIdleTimeEntry = new PendingEntry(
           new StreamMessageId(65456345),

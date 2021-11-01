@@ -25,7 +25,7 @@ object Producer extends App:
       .exitCode
 
   val sentNotification: ZIO[
-    Has[NotificationsStreamProducerConfig] with Random with Has[EventProducer[StreamInstance.Notifications]],
+    Has[NotificationsStreamProducerConfig] & Random & Has[EventProducer[StreamInstance.Notifications]],
     Throwable,
     Unit
   ] =

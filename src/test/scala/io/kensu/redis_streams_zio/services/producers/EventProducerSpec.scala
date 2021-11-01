@@ -18,7 +18,7 @@ import zio.test.mock.Expectation.*
 
 object EventProducerSpec extends DefaultRunnableSpec:
 
-  import TestData._
+  import TestData.*
 
   private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
     (redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore) >>> NotificationsEventProducer.redis

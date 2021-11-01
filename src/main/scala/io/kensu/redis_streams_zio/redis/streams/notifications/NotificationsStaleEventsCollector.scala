@@ -11,9 +11,11 @@ import zio.logging.Logging
 
 object NotificationsStaleEventsCollector:
 
-  def run(): ZIO[Logging with Has[RedisStream[StreamInstance.Notifications]] with Has[
-    NotificationsStreamConsumerConfig
-  ] with Logging with Clock, Throwable, Long] =
+  def run(): ZIO[
+    Logging & Has[RedisStream[StreamInstance.Notifications]] & Has[NotificationsStreamConsumerConfig] & Logging & Clock,
+    Throwable,
+    Long
+  ] =
     log.locally(Name(List(getClass.getName))) {
       RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, NotificationsStreamConsumerConfig]()
     }

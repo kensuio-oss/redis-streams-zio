@@ -1,7 +1,7 @@
 package io.kensu.redis_streams_zio.redis
 
-import io.kensu.redis_streams_zio.config._
-import io.kensu.redis_streams_zio.redis.PropertyGenerators.{redisData, _}
+import io.kensu.redis_streams_zio.config.*
+import io.kensu.redis_streams_zio.redis.PropertyGenerators.{redisData, *}
 import io.kensu.redis_streams_zio.redis.streams.{
   CreateGroupStrategy,
   ListGroupStrategy,
@@ -14,22 +14,22 @@ import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
 import io.kensu.redis_streams_zio.redis.streams.RedisConsumer.StreamInput
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{StreamGroup, StreamMessageId}
-import zio._
+import zio.*
 import zio.Schedule.Decision
 import zio.clock.Clock
 import zio.duration.{durationInt, Duration}
 import zio.logging.Logging
-import zio.test._
-import zio.test.Assertion._
+import zio.test.*
+import zio.test.Assertion.*
 import zio.test.environment.{TestClock, TestEnvironment}
-import zio.test.mock.Expectation._
+import zio.test.mock.Expectation.*
 
 object RedisConsumerSpec extends DefaultRunnableSpec:
 
-  import TestData._
+  import TestData.*
 
   override val spec: ZSpec[TestEnvironment, Failure] =
-    import zio.duration._
+    import zio.duration.*
     suite("RedisZStream.executeFor")(
       testM("reuse consumer group if the requested one exists") {
         checkAllM(promise) {
@@ -460,7 +460,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
   private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
-  private[this] case class TestEvent(
+  private[redis] case class TestEvent(
     id: StreamMessageId,
     msg: String
   )

@@ -10,7 +10,7 @@ import io.kensu.redis_streams_zio.redis.streams.{
   StreamInstance
 }
 import org.redisson.api.{PendingEntry, StreamGroup, StreamMessageId}
-import zio.test.mock._
+import zio.test.mock.*
 import zio.{Chunk, Has, NonEmptyChunk, Task, UIO, URLayer, ZLayer}
 import zio.duration.Duration
 

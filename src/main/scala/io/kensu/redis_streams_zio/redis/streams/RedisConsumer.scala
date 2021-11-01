@@ -13,12 +13,11 @@ import zio.stream.ZStream
 
 object RedisConsumer:
 
-  // TODO replace with &
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, ReadGroupResult]
+    ZStream[Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, ReadGroupResult]
 
   type StreamOutput[R, S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[R with Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Option[StreamMessageId]]
+    ZStream[R & Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Option[StreamMessageId]]
 
   def executeFor[R, S <: StreamInstance, C <: StreamConsumerConfig](
     shutdownHook: Promise[Throwable, Unit],
@@ -27,7 +26,7 @@ object RedisConsumer:
   )(
     implicit ts: Tag[RedisStream[S]],
     tscc: Tag[C]
-  ): ZIO[R with Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Long] =
+  ): ZIO[R & Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
       def setupStream(status: RefM[StreamSourceStatus]) =
         ZStream
@@ -139,7 +138,7 @@ object RedisConsumer:
         case None          => UIO(0L)
     }
 
-  private[this] case class StreamSourceStatus(
+  private[streams] case class StreamSourceStatus(
     lastPendingAttempt: Instant,
     keepPending: Boolean,
     checkedMessages: Set[StreamMessageId]
