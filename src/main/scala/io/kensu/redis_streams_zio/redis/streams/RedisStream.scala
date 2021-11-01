@@ -8,24 +8,22 @@ import io.kensu.redis_streams_zio.redis.RedisClient.RedisClient
 import org.redisson.api.{PendingEntry, RedissonClient, StreamGroup, StreamMessageId}
 import org.redisson.api.stream.StreamAddArgs
 import org.redisson.client.RedisException
-import zio._
+import zio.*
 import zio.duration.Duration
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 sealed trait CreateGroupStrategy
 
-object CreateGroupStrategy {
+object CreateGroupStrategy:
   case object Newest extends CreateGroupStrategy
   case object All extends CreateGroupStrategy
-}
 
 sealed trait ListGroupStrategy
 
-object ListGroupStrategy {
+object ListGroupStrategy:
   case object New extends ListGroupStrategy
   case object Pending extends ListGroupStrategy
-}
 
 final case class ReadGroupData(
   key: StreamKey,
@@ -37,7 +35,7 @@ final case class ReadGroupResult(
   data: Chunk[ReadGroupData]
 )
 
-trait RedisStream[S <: StreamInstance] {
+trait RedisStream[S <: StreamInstance]:
 
   val streamInstance: UIO[StreamInstance]
 
@@ -64,12 +62,11 @@ trait RedisStream[S <: StreamInstance] {
   def listPending(groupName: StreamGroupName, count: Int): Task[Chunk[PendingEntry]]
 
   def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId]
-}
 
 private[streams] final class RedissonRedisStream[S <: StreamInstance](
   instance: S,
   redisson: RedissonClient
-) extends RedisStream[S] {
+) extends RedisStream[S]:
 
   private val redissonStream = redisson.getStream[Array[Byte], Array[Byte]](instance.name.value)
 
@@ -83,13 +80,12 @@ private[streams] final class RedissonRedisStream[S <: StreamInstance](
         case e: RedisException if e.getMessage.contains("no such key") => ZIO.succeed(Chunk.empty)
       }
 
-  override def createGroup(groupName: StreamGroupName, strategy: CreateGroupStrategy): Task[Unit] = {
-    val redisStrategy = strategy match {
-      case CreateGroupStrategy.Newest => StreamMessageId.NEWEST
-      case CreateGroupStrategy.All    => StreamMessageId.ALL
-    }
+  override def createGroup(groupName: StreamGroupName, strategy: CreateGroupStrategy): Task[Unit] =
+    val redisStrategy =
+      strategy match
+        case CreateGroupStrategy.Newest => StreamMessageId.NEWEST
+        case CreateGroupStrategy.All    => StreamMessageId.ALL
     Task.fromCompletionStage(redissonStream.createGroupAsync(groupName.value, redisStrategy)).unit
-  }
 
   override def readGroup(
     groupName: StreamGroupName,
@@ -97,11 +93,11 @@ private[streams] final class RedissonRedisStream[S <: StreamInstance](
     count: Int,
     timeout: Duration,
     strategy: ListGroupStrategy
-  ): Task[Chunk[ReadGroupResult]] = {
-    val redisStrategy = strategy match {
-      case ListGroupStrategy.New     => StreamMessageId.NEVER_DELIVERED
-      case ListGroupStrategy.Pending => StreamMessageId.ALL
-    }
+  ): Task[Chunk[ReadGroupResult]] =
+    val redisStrategy =
+      strategy match
+        case ListGroupStrategy.New     => StreamMessageId.NEVER_DELIVERED
+        case ListGroupStrategy.Pending => StreamMessageId.ALL
     Task
       .fromCompletionStage(
         redissonStream
@@ -116,7 +112,7 @@ private[streams] final class RedissonRedisStream[S <: StreamInstance](
       ).flatMap { messages =>
         ZIO.effect {
           if messages == null then Chunk.empty
-          else {
+          else
             Chunk.fromIterable(messages.asScala).map {
               case (msgId, m) =>
                 val m0 = Chunk.fromIterable(m.asScala).map {
@@ -125,13 +121,11 @@ private[streams] final class RedissonRedisStream[S <: StreamInstance](
                 }
                 ReadGroupResult(msgId, m0)
             }
-          }
         }
       }
-  }
 
   override def ack(groupName: StreamGroupName, ids: NonEmptyChunk[StreamMessageId]): Task[Long] =
-    Task.fromCompletionStage(redissonStream.ackAsync(groupName.value, ids: _*)).map(_.longValue())
+    Task.fromCompletionStage(redissonStream.ackAsync(groupName.value, ids*)).map(_.longValue())
 
   override def fastClaim(
     groupName: StreamGroupName,
@@ -147,7 +141,7 @@ private[streams] final class RedissonRedisStream[S <: StreamInstance](
             consumerName.value,
             maxIdleTime.toMillis,
             TimeUnit.MILLISECONDS,
-            ids: _*
+            ids*
           )
       )
       .map(l => Chunk.fromIterable(l.asScala))
@@ -161,9 +155,8 @@ private[streams] final class RedissonRedisStream[S <: StreamInstance](
 
   override def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId] =
     Task.fromCompletionStage(redissonStream.addAsync(StreamAddArgs.entry(key.value.getBytes("UTF-8"), payload.toArray)))
-}
 
-object RedisStream {
+object RedisStream:
 
   def streamInstance[S <: StreamInstance](implicit ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], StreamInstance] =
     ZIO.serviceWith[RedisStream[S]](_.streamInstance)
@@ -210,14 +203,11 @@ object RedisStream {
   ts: Tag[RedisStream[S]]): RIO[Has[RedisStream[S]], StreamMessageId] =
     ZIO.serviceWith[RedisStream[S]](_.add(key, payload))
 
-}
-
 /** An additional, stream instance predefined definition for easier API usage and future refactoring. */
-object NotificationsRedisStream extends Accessible[RedisStream[StreamInstance.Notifications]] {
+object NotificationsRedisStream extends Accessible[RedisStream[StreamInstance.Notifications]]:
 
   val redisson: URLayer[
     Has[StreamInstance.Notifications] & RedisClient,
     Has[RedisStream[StreamInstance.Notifications]]
   ] =
     (new RedissonRedisStream[StreamInstance.Notifications](_, _)).toLayer
-}

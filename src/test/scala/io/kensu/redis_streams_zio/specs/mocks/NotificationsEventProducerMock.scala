@@ -6,7 +6,7 @@ import io.kensu.redis_streams_zio.services.producers.{EventProducer, EventSerial
 import zio.{Has, Tag, Task, URLayer, ZLayer}
 import zio.test.mock._
 
-object NotificationsEventProducerMock extends Mock[Has[EventProducer[StreamInstance.Notifications]]] {
+object NotificationsEventProducerMock extends Mock[Has[EventProducer[StreamInstance.Notifications]]]:
 
   object Publish extends Poly.Effect.Input[Throwable, PublishedEventId]
 
@@ -19,4 +19,3 @@ object NotificationsEventProducerMock extends Mock[Has[EventProducer[StreamInsta
         }
       }
     }
-}

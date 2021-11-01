@@ -18,11 +18,11 @@ import zio.test.Assertion.*
 import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation.*
 
-object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
+object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec:
 
   import TestData._
 
-  override val spec: ZSpec[TestEnvironment, Failure] = {
+  override val spec: ZSpec[TestEnvironment, Failure] =
     import zio.duration._
     suite("RedisZCollector.executeFor")(
       testM("does not begin processing before initial delay") {
@@ -266,12 +266,11 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
           .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
       }
     ) @@ TestAspect.timeout(30.seconds)
-  }
 
   private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
-  private object TestData {
+  private object TestData:
 
     val config: StreamConsumerConfig = new StreamConsumerConfig {
 
@@ -293,5 +292,3 @@ object RedisStaleEventsCollectorSpec extends DefaultRunnableSpec {
       override val groupName: StreamGroupName       = StreamGroupName("test-stream-group-name")
       override val consumerName: StreamConsumerName = StreamConsumerName("test-stream-consumer-name")
     }
-  }
-}

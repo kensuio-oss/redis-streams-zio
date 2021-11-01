@@ -2,9 +2,9 @@ package io.kensu.redis_streams_zio.config
 
 import zio.{Has, Layer}
 //import zio.config.{given, _}
-import zio.config._
+import zio.config.*
 //import zio.config.TupleConversion.{given, _}
-import zio.config.ConfigDescriptor._
+import zio.config.ConfigDescriptor.*
 import zio.config.magnolia.{descriptor, Descriptor}
 import zio.config.typesafe.TypesafeConfig
 import zio.config.ReadError
@@ -37,41 +37,33 @@ final case class RedisConfig(
   password: String
 )
 
-final case class StreamName(value: String) {
+final case class StreamName(value: String):
   override def toString: String = value
-}
 
-object StreamName {
+object StreamName:
 
   given Descriptor[StreamName] = Descriptor.from(string.to[StreamName])
-}
 
-final case class StreamGroupName(value: String) {
+final case class StreamGroupName(value: String):
   override def toString: String = value
-}
 
-object StreamGroupName {
+object StreamGroupName:
 
   given Descriptor[StreamGroupName] = Descriptor.from(string.to[StreamGroupName])
-}
 
-final case class StreamConsumerName(value: String) {
+final case class StreamConsumerName(value: String):
   override def toString: String = value
-}
 
-object StreamConsumerName {
+object StreamConsumerName:
 
   given Descriptor[StreamConsumerName] = Descriptor.from(string.to[StreamConsumerName])
-}
 
-final case class StreamKey(value: String) {
+final case class StreamKey(value: String):
   override def toString: String = value
-}
 
-object StreamKey {
+object StreamKey:
 
   given Descriptor[StreamKey] = Descriptor.from(string.to[StreamKey])
-}
 
 final case class ClaimingConfig(
   initialDelay: Duration,
@@ -86,7 +78,7 @@ final case class RetryConfig(
   factor: Double
 )
 
-trait StreamConsumerConfig {
+trait StreamConsumerConfig:
   val claiming: ClaimingConfig
   val retry: RetryConfig
   val readTimeout: Duration
@@ -94,11 +86,9 @@ trait StreamConsumerConfig {
   val streamName: StreamName
   val groupName: StreamGroupName
   val consumerName: StreamConsumerName
-}
 
-trait StreamProducerConfig {
+trait StreamProducerConfig:
   val streamName: StreamName
-}
 
 final case class NotificationsStreamConsumerConfig(
   claiming: ClaimingConfig,
@@ -116,9 +106,8 @@ final case class NotificationsStreamProducerConfig(
   addKey: StreamKey
 ) extends StreamProducerConfig
 
-object Configs {
-  import zio.config.syntax._
+object Configs:
+  import zio.config.syntax.*
 
   val appConfig: Layer[ReadError[String], Has[AppConfig]] =
     TypesafeConfig.fromDefaultLoader(descriptor[RootConfig]).narrow(_.kensu)
-}

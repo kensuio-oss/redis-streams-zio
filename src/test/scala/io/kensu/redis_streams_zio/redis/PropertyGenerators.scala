@@ -8,7 +8,7 @@ import zio.test.Gen._
 import zio.test.{Gen, Sized}
 import zio.{Chunk, Promise}
 
-object PropertyGenerators {
+object PropertyGenerators:
 
   val promise: Gen[Any, Promise[Throwable, Unit]]   = fromEffect(Promise.make[Throwable, Unit])
   val streamMessageId: Gen[Random, StreamMessageId] = long(1L, 99999999999L).map(new StreamMessageId(_))
@@ -23,4 +23,3 @@ object PropertyGenerators {
 
   def uniqueRedisData(streamKey: StreamKey): Gen[Random with Sized, (ReadGroupResult, ReadGroupResult)] =
     (redisData(streamKey) <&> redisData(streamKey)).filter { case (a, b) => a.messageId != b.messageId }
-}

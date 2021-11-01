@@ -24,11 +24,11 @@ import zio.test.Assertion._
 import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation._
 
-object RedisConsumerSpec extends DefaultRunnableSpec {
+object RedisConsumerSpec extends DefaultRunnableSpec:
 
   import TestData._
 
-  override val spec: ZSpec[TestEnvironment, Failure] = {
+  override val spec: ZSpec[TestEnvironment, Failure] =
     import zio.duration._
     suite("RedisZStream.executeFor")(
       testM("reuse consumer group if the requested one exists") {
@@ -447,7 +447,6 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         }
       }
     ) @@ TestAspect.timeout(30.seconds)
-  }
 
   private def eventsMapper(rawData: ReadGroupResult) =
     ZIO.succeed(TestEvent(rawData.messageId, new String(rawData.data.head.payload.toArray, "UTF-8")))
@@ -466,7 +465,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
     msg: String
   )
 
-  private object TestData {
+  private object TestData:
 
     val config: StreamConsumerConfig = new StreamConsumerConfig {
 
@@ -514,5 +513,3 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         config.readTimeout,
         ListGroupStrategy.New
       )
-  }
-}

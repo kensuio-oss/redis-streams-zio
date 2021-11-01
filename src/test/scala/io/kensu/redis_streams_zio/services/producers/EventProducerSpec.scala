@@ -16,7 +16,7 @@ import zio.test.Assertion.*
 import zio.test.environment.{TestClock, TestEnvironment}
 import zio.test.mock.Expectation.*
 
-object EventProducerSpec extends DefaultRunnableSpec {
+object EventProducerSpec extends DefaultRunnableSpec:
 
   import TestData._
 
@@ -72,21 +72,17 @@ object EventProducerSpec extends DefaultRunnableSpec {
       )
     )
 
-  private object TestData {
+  private object TestData:
 
     val streamName: StreamName      = StreamName("test-stream")
     val testStreamKey: StreamKey    = StreamKey("create")
     val testEvent: TestEvent        = TestEvent("Important delivery!")
     val testEventBytes: Chunk[Byte] = Chunk.fromArray(testEvent.asBytes)
-  }
 
-  final case class TestEvent(msg: String) {
+  final case class TestEvent(msg: String):
     lazy val asBytes: Array[Byte] = msg.getBytes("UTF-8")
-  }
 
-  object TestEvent {
+  object TestEvent:
 
     implicit val eventSerializable: EventSerializable[TestEvent] =
       (e: TestEvent) => e.asBytes
-  }
-}

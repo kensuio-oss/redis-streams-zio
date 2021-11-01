@@ -3,12 +3,12 @@ package io.kensu.redis_streams_zio.redis.streams
 import io.kensu.redis_streams_zio.common.Scheduling
 import io.kensu.redis_streams_zio.config.StreamConsumerConfig
 import org.redisson.api.StreamMessageId
-import zio._
+import zio.*
 import zio.clock.Clock
 import zio.config.getConfig
-import zio.logging._
+import zio.logging.*
 
-object RedisStaleEventsCollector {
+object RedisStaleEventsCollector:
 
   /**
    * Builds the Redis claiming logic for problematic messages. The logic has to be delayed to not clash with stream
@@ -63,7 +63,7 @@ object RedisStaleEventsCollector {
       val group        = config.groupName
       val batchSize    = messageIds.size
       val commonLogMsg = s"batch of $batchSize messages for group $group"
-      NonEmptyChunk.fromChunk(messageIds) match {
+      NonEmptyChunk.fromChunk(messageIds) match
         case None      => UIO(0L)
         case Some(ids) =>
           log.debug(s"Attempt to acknowledge $commonLogMsg") *>
@@ -73,7 +73,6 @@ object RedisStaleEventsCollector {
                 t => log.throwable(s"Failed to acknowledge $commonLogMsg", t),
                 _ => log.info(s"Successfully acknowledged $commonLogMsg")
               )
-      }
     }
 
   private def claim[S <: StreamInstance, C <: StreamConsumerConfig](
@@ -84,7 +83,7 @@ object RedisStaleEventsCollector {
       val consumer     = config.consumerName
       val batchSize    = messageIds.size
       val commonLogMsg = s"for group $group to consumer $consumer"
-      NonEmptyChunk.fromChunk(messageIds) match {
+      NonEmptyChunk.fromChunk(messageIds) match
         case None      => UIO(0L)
         case Some(ids) =>
           log.debug(s"Attempt to claim batch of $batchSize messages $commonLogMsg $ids") *>
@@ -95,6 +94,4 @@ object RedisStaleEventsCollector {
                 t => log.throwable(s"Failed to claim $commonLogMsg (maybe an attempt to claim the same resource)", t),
                 size => log.info(s"Successfully claimed batch of $size messages $commonLogMsg")
               )
-      }
     }
-}

@@ -5,10 +5,10 @@ import org.redisson.Redisson
 import org.redisson.api.{RStream, RedissonClient}
 import org.redisson.client.codec.ByteArrayCodec
 import org.redisson.config.Config
-import zio._
+import zio.*
 import zio.config.getConfig
 
-object RedisClient {
+object RedisClient:
 
   type RedisClient = Has[RedissonClient]
 
@@ -29,4 +29,3 @@ object RedisClient {
 
   def getStream[K, V](name: StreamName): ZIO[RedisClient, Nothing, RStream[K, V]] =
     ZIO.service[RedissonClient].flatMap(client => UIO(client.getStream[K, V](name.value)))
-}

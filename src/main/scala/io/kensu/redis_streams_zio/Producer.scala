@@ -5,7 +5,7 @@ import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
 import io.kensu.redis_streams_zio.redis.streams.{NotificationsRedisStream, StreamInstance}
 import io.kensu.redis_streams_zio.services.producers.NotificationsEventProducer
-import zio._
+import zio.*
 import zio.clock.Clock
 import zio.config.getConfig
 import zio.config.syntax.ZIOConfigNarrowOps
@@ -16,7 +16,7 @@ import zio.random.nextString
 import io.kensu.redis_streams_zio.services.producers.EventProducer
 import zio.random.Random
 
-object Producer extends App {
+object Producer extends App:
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
     sentNotification
@@ -35,7 +35,7 @@ object Producer extends App {
       _      <- NotificationsEventProducer(_.publish(config.addKey, str))
     yield ()
 
-  private val liveEnv = {
+  private val liveEnv =
     val appConfig      = Configs.appConfig
     val producerConfig = appConfig.narrow(_.redisStreams.producers.notifications)
 
@@ -48,18 +48,13 @@ object Producer extends App {
 
     val clock = ZLayer.identity[Clock]
 
-    val notificationsStream = {
-      val redisStream = {
+    val notificationsStream =
+      val redisStream =
         val streamInstance = appConfig.narrow(_.redisStreams.producers).map { hasProducers =>
           Has(StreamInstance.Notifications(hasProducers.get.notifications.streamName))
         }
         (streamInstance ++ redisClient) >>> NotificationsRedisStream.redisson
-      }
 
       (redisStream ++ clock ++ logging) >>> NotificationsEventProducer.redis
-    }
 
     clock ++ logging ++ producerConfig ++ notificationsStream
-
-  }
-}

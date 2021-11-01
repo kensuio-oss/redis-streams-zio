@@ -4,7 +4,7 @@ import io.kensu.redis_streams_zio.common.CorrelationId
 import zio.logging.LogAnnotation
 import zio.logging.LogContext
 
-object KensuLogAnnotation {
+object KensuLogAnnotation:
 
   val AppCorrelationId: CorrelationId = io.kensu.redis_streams_zio.common.CorrelationId("application")
 
@@ -16,4 +16,3 @@ object KensuLogAnnotation {
   )
 
   val InitialLogContext: LogContext => LogContext = KensuLogAnnotation.CorrelationId(AppCorrelationId)
-}

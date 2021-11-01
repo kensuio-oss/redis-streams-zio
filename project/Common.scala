@@ -13,11 +13,13 @@ object Common {
 //    "-language:higherKinds",
 //    "-language:implicitConversions",
 //    "-language:postfixOps",
-    "-explain"
-//    "-new-syntax"
-//    "-source:future-migration",
-//    "-rewrite"
-//"-language:strictEquality",
+    "-explain",
+//    "-new-syntax", "-rewrite" //First we need to use -new-syntax with rewrite, in the 2nd step 3.0-migration
+    "-indent",
+    "-rewrite"
+//    "-source:3.0-migration", //Supports both new and old keywords?
+    // "-source:future-migration" // Supports given/using etc?
+    // "-language:strictEquality",
 //    "-Werror"
   )
 

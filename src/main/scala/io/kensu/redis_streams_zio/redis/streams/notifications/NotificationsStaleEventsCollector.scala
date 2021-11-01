@@ -9,7 +9,7 @@ import zio.{Has, ZIO}
 import zio.clock.Clock
 import zio.logging.Logging
 
-object NotificationsStaleEventsCollector {
+object NotificationsStaleEventsCollector:
 
   def run(): ZIO[Logging with Has[RedisStream[StreamInstance.Notifications]] with Has[
     NotificationsStreamConsumerConfig
@@ -17,4 +17,3 @@ object NotificationsStaleEventsCollector {
     log.locally(Name(List(getClass.getName))) {
       RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, NotificationsStreamConsumerConfig]()
     }
-}

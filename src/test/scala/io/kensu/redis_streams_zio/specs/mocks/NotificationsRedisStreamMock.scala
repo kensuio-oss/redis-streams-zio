@@ -14,7 +14,7 @@ import zio.test.mock._
 import zio.{Chunk, Has, NonEmptyChunk, Task, UIO, URLayer, ZLayer}
 import zio.duration.Duration
 
-object NotificationsRedisStreamMock extends Mock[Has[RedisStream[StreamInstance.Notifications]]] {
+object NotificationsRedisStreamMock extends Mock[Has[RedisStream[StreamInstance.Notifications]]]:
 
   object StreamInstance extends Effect[Unit, Nothing, StreamInstance]
 
@@ -87,4 +87,3 @@ object NotificationsRedisStreamMock extends Mock[Has[RedisStream[StreamInstance.
         }
       }
     }
-}
