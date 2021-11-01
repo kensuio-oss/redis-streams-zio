@@ -113,13 +113,11 @@ private[streams] final class RedissonRedisStream[S <: StreamInstance](
         ZIO.effect {
           if messages == null then Chunk.empty
           else
-            Chunk.fromIterable(messages.asScala).map {
-              case (msgId, m) =>
-                val m0 = Chunk.fromIterable(m.asScala).map {
-                  case (key, value) =>
-                    ReadGroupData(StreamKey(new String(key, "UTF-8")), Chunk.fromArray(value))
-                }
-                ReadGroupResult(msgId, m0)
+            Chunk.fromIterable(messages.asScala).map { (msgId, m) =>
+              val m0 = Chunk.fromIterable(m.asScala).map { (key, value) =>
+                ReadGroupData(StreamKey(new String(key, "UTF-8")), Chunk.fromArray(value))
+              }
+              ReadGroupResult(msgId, m0)
             }
         }
       }

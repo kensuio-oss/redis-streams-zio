@@ -18,8 +18,8 @@ object Common {
 //    "-indent", // Once done, comment out // Together with -rewrite, remove {...} syntax when possible due to significant indentation.
 //    "-rewrite",
 //    "-source:3.0-migration", //Supports both new and old keywords?
-    "-source:future-migration" // Supports given/using etc?
-    // "-language:strictEquality",
+    "-source:future-migration" // Supports given/using etc.
+    // "-language:strictEquality"
 //    "-Werror"
   )
 
@@ -30,7 +30,6 @@ object Common {
         .settings(
           organization := "io.kensu",
           name := "redis-streams-zio",
-          semanticdbVersion := "4.4.28",
           scalaVersion := "3.1.0",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,

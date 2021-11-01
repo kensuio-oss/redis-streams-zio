@@ -25,16 +25,15 @@ object Consumer extends App:
         shutdownHook            <- Promise.make[Throwable, Unit]
         notificationStreamFiber <- notificationsStream(shutdownHook)
       yield (shutdownHook, notificationStreamFiber)
-    } {
-      case (shutdownHook, notificationStreamFiber) =>
-        (for
-          _ <- log.info("Halting streams")
-          _ <- shutdownHook.succeed(())
-          _ <- shutdownHook.await
-          _ <- log.info("Shutting down streams... this may take a few seconds")
-          _ <- notificationStreamFiber.join `race` ZIO.sleep(5.seconds)
-          _ <- log.info("Streams shut down")
-        yield ()).ignore
+    } { (shutdownHook, notificationStreamFiber) =>
+      (for
+        _ <- log.info("Halting streams")
+        _ <- shutdownHook.succeed(())
+        _ <- shutdownHook.await
+        _ <- log.info("Shutting down streams... this may take a few seconds")
+        _ <- notificationStreamFiber.join `race` ZIO.sleep(5.seconds)
+        _ <- log.info("Streams shut down")
+      yield ()).ignore
     }
 
   private def notificationsStream(shutdownHook: Promise[Throwable, Unit]) =

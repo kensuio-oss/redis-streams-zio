@@ -16,10 +16,9 @@ object PropertyGenerators:
   def redisData(
     streamKey: StreamKey
   ): Gen[Random & Sized, ReadGroupResult] =
-    (anyString <*> streamMessageId).map {
-      case (msg, msgId) =>
-        ReadGroupResult(msgId, Chunk(ReadGroupData(streamKey, Chunk.fromArray(msg.getBytes("UTF-8")))))
+    (anyString <*> streamMessageId).map { (msg, msgId) =>
+      ReadGroupResult(msgId, Chunk(ReadGroupData(streamKey, Chunk.fromArray(msg.getBytes("UTF-8")))))
     }
 
   def uniqueRedisData(streamKey: StreamKey): Gen[Random & Sized, (ReadGroupResult, ReadGroupResult)] =
-    (redisData(streamKey) <&> redisData(streamKey)).filter { case (a, b) => a.messageId != b.messageId }
+    (redisData(streamKey) <&> redisData(streamKey)).filter((a, b) => a.messageId != b.messageId)
