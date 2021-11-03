@@ -1,9 +1,7 @@
 package io.kensu.redis_streams_zio.config
 
 import zio.{Has, Layer}
-//import zio.config.{given, _}
 import zio.config.*
-//import zio.config.TupleConversion.{given, _}
 import zio.config.ConfigDescriptor.*
 import zio.config.magnolia.{descriptor, Descriptor}
 import zio.config.typesafe.TypesafeConfig

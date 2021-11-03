@@ -12,7 +12,7 @@ object KensuLogAnnotation:
     name         = "correlation_id",
     initialValue = AppCorrelationId,
     combine      = (_, r) => r,
-    render       = _.value
+    render       = _.toString
   )
 
   val InitialLogContext: LogContext => LogContext = KensuLogAnnotation.CorrelationId(AppCorrelationId)

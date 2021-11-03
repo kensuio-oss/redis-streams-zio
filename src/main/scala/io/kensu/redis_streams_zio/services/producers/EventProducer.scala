@@ -20,8 +20,10 @@ object EventSerializable:
   implicit val StringEventSerializable: EventSerializable[String] =
     (e: String) => e.getBytes("UTF-8")
 
-final case class PublishedEventId(value: String) extends AnyVal:
-  override def toString: String = value
+opaque type PublishedEventId = String
+
+object PublishedEventId:
+  def apply(value: String): PublishedEventId = value
 
 trait EventProducer[S <: StreamInstance]:
 
