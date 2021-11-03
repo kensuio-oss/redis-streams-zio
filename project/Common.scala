@@ -9,15 +9,10 @@ object Common {
     "-unchecked",
     "-deprecation",
     "-feature",
-//    "-language:existentials",
-//    "-language:higherKinds",
-//    "-language:implicitConversions",
-//    "-language:postfixOps",
     "-explain",
     "-new-syntax", // First we need to use -new-syntax with rewrite, in the 2nd step 3.0-migration // Require `then` and `do` in control expressions.
 //    "-indent", // Once done, comment out // Together with -rewrite, remove {...} syntax when possible due to significant indentation.
 //    "-rewrite",
-//    "-source:3.0-migration", //Supports both new and old keywords?
     "-source:future-migration" // Supports given/using etc.
     // "-language:strictEquality"
 //    "-Werror"

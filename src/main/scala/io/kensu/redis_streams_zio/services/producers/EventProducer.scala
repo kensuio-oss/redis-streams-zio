@@ -14,9 +14,9 @@ trait EventSerializable[E]:
 
 object EventSerializable:
 
-  def apply[E](implicit bc: EventSerializable[E]): EventSerializable[E] = bc
+  def apply[E](using es: EventSerializable[E]): EventSerializable[E] = es
 
-  implicit val StringEventSerializable: EventSerializable[String] =
+  given EventSerializable[String] =
     (e: String) => e.getBytes("UTF-8")
 
 opaque type PublishedEventId = String

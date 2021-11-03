@@ -84,5 +84,5 @@ object EventProducerSpec extends DefaultRunnableSpec:
 
   object TestEvent:
 
-    implicit val eventSerializable: EventSerializable[TestEvent] =
+    given EventSerializable[TestEvent] =
       (e: TestEvent) => e.asBytes

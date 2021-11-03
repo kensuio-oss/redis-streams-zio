@@ -17,8 +17,8 @@ object RedisStaleEventsCollector:
   def executeFor[S <: StreamInstance, C <: StreamConsumerConfig](
     repeatStrategy: Option[Schedule[Any, Any, Unit]] = None
   )(
-    implicit ts: Tag[RedisStream[S]],
-    tscc: Tag[C]
+    using Tag[RedisStream[S]],
+    Tag[C]
   ): ZIO[Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Long] =
     getConfig[C].flatMap { config =>
       getPendingEvents
@@ -33,8 +33,8 @@ object RedisStaleEventsCollector:
     }
 
   private def getPendingEvents[S <: StreamInstance, C <: StreamConsumerConfig](
-    implicit ts: Tag[RedisStream[S]],
-    tscc: Tag[C]
+    using Tag[RedisStream[S]],
+    Tag[C]
   ) =
     getConfig[C].flatMap { config =>
       val group    = config.groupName
@@ -58,7 +58,7 @@ object RedisStaleEventsCollector:
 
   private def acknowledge[S <: StreamInstance, C <: StreamConsumerConfig](
     messageIds: Chunk[StreamMessageId]
-  )(implicit ts: Tag[RedisStream[S]], tscc: Tag[C]) =
+  )(using Tag[RedisStream[S]], Tag[C]) =
     getConfig[C].flatMap { config =>
       val group        = config.groupName
       val batchSize    = messageIds.size
@@ -77,7 +77,7 @@ object RedisStaleEventsCollector:
 
   private def claim[S <: StreamInstance, C <: StreamConsumerConfig](
     messageIds: Chunk[StreamMessageId]
-  )(implicit ts: Tag[RedisStream[S]], tscc: Tag[C]) =
+  )(using Tag[RedisStream[S]], Tag[C]) =
     getConfig[C].flatMap { config =>
       val group        = config.groupName
       val consumer     = config.consumerName

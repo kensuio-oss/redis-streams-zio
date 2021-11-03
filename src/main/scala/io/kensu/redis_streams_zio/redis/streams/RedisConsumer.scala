@@ -23,10 +23,7 @@ object RedisConsumer:
     shutdownHook: Promise[Throwable, Unit],
     eventsProcessor: StreamInput[S, C] => StreamOutput[R, S, C],
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
-  )(
-    implicit ts: Tag[RedisStream[S]],
-    tscc: Tag[C]
-  ): ZIO[R & Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Long] =
+  )(using Tag[RedisStream[S]], Tag[C]): ZIO[R & Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
       def setupStream(status: RefM[StreamSourceStatus]) =
         ZStream
@@ -59,8 +56,8 @@ object RedisConsumer:
       )
 
   private def assureStreamGroup[S <: StreamInstance, C <: StreamConsumerConfig](
-    implicit ts: Tag[RedisStream[S]],
-    tscc: Tag[C]
+    using Tag[RedisStream[S]],
+    Tag[C]
   ) =
     getConfig[C].flatMap { config =>
       val groupName = config.groupName
@@ -76,7 +73,7 @@ object RedisConsumer:
 
   private def getEvents[R, S <: StreamInstance, C <: StreamConsumerConfig](
     streamStatus: RefM[StreamSourceStatus]
-  )(implicit ts: Tag[RedisStream[S]], tscc: Tag[C]) =
+  )(using Tag[RedisStream[S]], Tag[C]) =
     getConfig[C].flatMap { config =>
       val group    = config.groupName
       val consumer = config.consumerName
@@ -121,8 +118,8 @@ object RedisConsumer:
     }
 
   private def acknowledge[S <: StreamInstance, C <: StreamConsumerConfig](msgId: Option[StreamMessageId])(
-    implicit ts: Tag[RedisStream[S]],
-    tscc: Tag[C]
+    using Tag[RedisStream[S]],
+    Tag[C]
   ) =
     getConfig[C].flatMap { config =>
       val commonLogMsg = s"for group ${config.groupName} and consumer ${config.consumerName}"
