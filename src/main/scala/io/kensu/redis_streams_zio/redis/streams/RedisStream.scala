@@ -2,7 +2,6 @@ package io.kensu.redis_streams_zio.redis.streams
 
 import java.util.concurrent.TimeUnit
 
-import io.kensu.redis_streams_zio.common.Accessible
 import io.kensu.redis_streams_zio.config.{StreamConsumerName, StreamGroupName, StreamKey}
 import io.kensu.redis_streams_zio.redis.RedisClient.RedisClient
 import org.redisson.api.{PendingEntry, RedissonClient, StreamGroup, StreamMessageId}

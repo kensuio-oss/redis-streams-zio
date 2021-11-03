@@ -1,6 +1,5 @@
 package io.kensu.redis_streams_zio.services.producers
 
-import io.kensu.redis_streams_zio.common.Accessible
 import io.kensu.redis_streams_zio.config.StreamKey
 import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
 import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
