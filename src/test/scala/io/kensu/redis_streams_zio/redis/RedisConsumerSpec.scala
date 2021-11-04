@@ -1,34 +1,35 @@
 package io.kensu.redis_streams_zio.redis
 
-import io.kensu.redis_streams_zio.config._
-import io.kensu.redis_streams_zio.redis.PropertyGenerators.{redisData, _}
+import io.kensu.redis_streams_zio.config.*
+import io.kensu.redis_streams_zio.redis.PropertyGenerators.{redisData, *}
 import io.kensu.redis_streams_zio.redis.streams.{
   CreateGroupStrategy,
   ListGroupStrategy,
   ReadGroupResult,
   RedisConsumer,
+  RedisStream,
   StreamInstance
 }
-import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
 import io.kensu.redis_streams_zio.redis.streams.RedisConsumer.StreamInput
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{StreamGroup, StreamMessageId}
-import zio._
+import zio.*
 import zio.Schedule.Decision
 import zio.clock.Clock
 import zio.duration.{durationInt, Duration}
 import zio.logging.Logging
-import zio.test._
-import zio.test.Assertion._
+import zio.test.*
+import zio.test.Assertion.*
 import zio.test.environment.{TestClock, TestEnvironment}
-import zio.test.mock.Expectation._
+import zio.test.mock.Expectation.*
 
-object RedisConsumerSpec extends DefaultRunnableSpec {
+object RedisConsumerSpec extends DefaultRunnableSpec:
 
-  import TestData._
+  import TestData.*
 
-  override val spec: ZSpec[TestEnvironment, Failure] = {
-    import zio.duration._
+  override val spec: ZSpec[TestEnvironment, Failure] =
+    import zio.duration.*
     suite("RedisZStream.executeFor")(
       testM("reuse consumer group if the requested one exists") {
         checkAllM(promise) {
@@ -206,7 +207,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         checkAllM(promise, uniqueRedisData(streamKey)) {
           case (shutdownHook, (redisData1, redisData2)) =>
             val eventProcessor: TestEvent => UIO[Option[StreamMessageId]] = e => {
-              if (e.id == redisData1.messageId) ZIO.none
+              if e.id == redisData1.messageId then ZIO.none
               else ZIO.succeed(redisData2.messageId).asSome
             }
 
@@ -256,10 +257,10 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                     .unit
                 )
 
-            (for {
+            (for
               clock  <- ZIO.service[TestClock.Service]
               result <- stream(clock)
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -284,11 +285,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -316,11 +317,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -349,11 +350,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(0L)))
+            yield assert(result)(equalTo(0L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -390,11 +391,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                   repeatStrategy  = Schedule.recurs(0).unit
                 )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
-            } yield assert(result)(equalTo(1L)))
+            yield assert(result)(equalTo(1L)))
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
@@ -430,23 +431,22 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
                 repeatStrategy  = Schedule.forever
-                  .onDecision({
+                  .onDecision {
                     case Decision.Continue(attempt, _, _) if attempt == 1 => shutdownHook.succeed(())
                     case _                                                => ZIO.unit
-                  })
+                  }
                   .unit
               )
 
-            (for {
+            (for
               forked <- stream.fork
               _      <- shutdownHook.await
               _      <- forked.join
-            } yield assertCompletes)
+            yield assertCompletes)
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       }
     ) @@ TestAspect.timeout(30.seconds)
-  }
 
   private def eventsMapper(rawData: ReadGroupResult) =
     ZIO.succeed(TestEvent(rawData.messageId, new String(rawData.data.head.payload.toArray, "UTF-8")))
@@ -457,17 +457,17 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
   ) =
     stream.mapM(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
 
-  private def testEnv(redisStreamMock: ULayer[NotificationsRedisStream]) =
+  private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
 
-  private[this] case class TestEvent(
+  private[redis] case class TestEvent(
     id: StreamMessageId,
     msg: String
   )
 
-  private object TestData {
+  private object TestData:
 
-    val config = new StreamConsumerConfig {
+    val config: StreamConsumerConfig = new StreamConsumerConfig {
 
       override val claiming: ClaimingConfig = ClaimingConfig(
         initialDelay      = 5.seconds,
@@ -488,9 +488,15 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
       override val consumerName: StreamConsumerName = StreamConsumerName("test-stream-consumer-name")
     }
 
-    val streamKey = StreamKey("test-event-key")
+    val streamKey: StreamKey = StreamKey("test-event-key")
 
-    val pendingReadGroupCorrectArgs =
+    val pendingReadGroupCorrectArgs: (
+      StreamGroupName,
+      StreamConsumerName,
+      Int,
+      Duration,
+      ListGroupStrategy.Pending.type
+    ) =
       (
         config.groupName,
         config.consumerName,
@@ -499,7 +505,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         ListGroupStrategy.Pending
       )
 
-    val newReadGroupCorrectArgs =
+    val newReadGroupCorrectArgs: (StreamGroupName, StreamConsumerName, Int, Duration, ListGroupStrategy.New.type) =
       (
         config.groupName,
         config.consumerName,
@@ -507,5 +513,3 @@ object RedisConsumerSpec extends DefaultRunnableSpec {
         config.readTimeout,
         ListGroupStrategy.New
       )
-  }
-}

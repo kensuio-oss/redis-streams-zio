@@ -1,51 +1,52 @@
 package io.kensu.redis_streams_zio.services.producers
 
-import io.kensu.redis_streams_zio.common.Accessible
 import io.kensu.redis_streams_zio.config.StreamKey
 import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
-import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream.NotificationsRedisStream
-import zio._
+import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
+import zio.*
 import zio.Schedule.Decision
 import zio.clock.Clock
-import zio.duration._
+import zio.duration.*
 import zio.logging.{Logger, Logging}
 
-trait EventSerializable[E] {
+trait EventSerializable[E]:
   def serialize(e: E): Array[Byte]
-}
 
-object EventSerializable {
+object EventSerializable:
 
-  def apply[E](implicit bc: EventSerializable[E]): EventSerializable[E] = bc
+  def apply[E](using es: EventSerializable[E]): EventSerializable[E] = es
 
-  implicit val StringEventSerializable: EventSerializable[String] =
+  given EventSerializable[String] =
     (e: String) => e.getBytes("UTF-8")
-}
 
-final case class PublishedEventId(value: String) extends AnyVal {
-  override def toString: String = value
-}
+opaque type PublishedEventId = String
 
-trait EventProducer[S <: StreamInstance] {
+object PublishedEventId:
+  def apply(value: String): PublishedEventId = value
+
+trait EventProducer[S <: StreamInstance]:
 
   /**
    * Publishes a message.
-   * @param streamKey key name under which to store the event
-   * @param event anything that satisfies EventPublishable type class
-   * @tparam E EventSerializable type class
-   * @return a computed message id
+   * @param streamKey
+   *   key name under which to store the event
+   * @param event
+   *   anything that satisfies EventPublishable type class
+   * @tparam E
+   *   EventSerializable type class
+   * @return
+   *   a computed message id
    */
   def publish[E: EventSerializable: Tag](
     streamKey: StreamKey,
     event: E
   ): Task[PublishedEventId]
-}
 
 final case class RedisEventProducer[S <: StreamInstance: Tag](
   stream: RedisStream[S],
   clock: Clock.Service,
   log: Logger[String]
-) extends EventProducer[S] {
+) extends EventProducer[S]:
 
   private val env = Has(clock)
 
@@ -64,22 +65,19 @@ final case class RedisEventProducer[S <: StreamInstance: Tag](
       val retryPolicy =
         Schedule.exponential(3.seconds) *> Schedule
           .recurs(3)
-          .onDecision({
+          .onDecision {
             case Decision.Done(_)                 => log.warn(s"An event is done retrying publishing")
             case Decision.Continue(attempt, _, _) => log.info(s"An event will be retried #${attempt + 1}")
-          })
+          }
 
       send.retry(retryPolicy).provide(env)
     }
-}
 
-/**
- * An additional, stream instance predefined definition for easier API usage and future refactoring.
- */
-object NotificationsEventProducer extends Accessible[EventProducer[StreamInstance.Notifications]] {
+/** An additional, stream instance predefined definition for easier API usage and future refactoring. */
+object NotificationsEventProducer extends Accessible[EventProducer[StreamInstance.Notifications]]:
 
-  type NotificationsEventProducer = Has[EventProducer[StreamInstance.Notifications]]
-
-  val redis: URLayer[NotificationsRedisStream & Clock & Logging, NotificationsEventProducer] =
+  val redis: URLayer[
+    Has[RedisStream[StreamInstance.Notifications]] & Clock & Logging,
+    Has[EventProducer[StreamInstance.Notifications]]
+  ] =
     (RedisEventProducer[StreamInstance.Notifications](_, _, _)).toLayer
-}

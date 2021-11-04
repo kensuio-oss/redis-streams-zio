@@ -9,16 +9,13 @@ object Common {
     "-unchecked",
     "-deprecation",
     "-feature",
-    "-language:existentials",
-    "-language:higherKinds",
-    "-language:implicitConversions",
-    "-language:postfixOps",
-    "-Ymacro-annotations",
-    "-Wdead-code",
-//    "-Werror",
-//    "-Wunused",
-    "-Wnumeric-widen",
-    "-Xlint:-infer-any"
+    "-explain",
+    "-new-syntax", // First we need to use -new-syntax with rewrite, in the 2nd step 3.0-migration // Require `then` and `do` in control expressions.
+//    "-indent", // Once done, comment out // Together with -rewrite, remove {...} syntax when possible due to significant indentation.
+//    "-rewrite",
+    "-source:future-migration" // Supports given/using etc.
+    // "-language:strictEquality"
+//    "-Werror"
   )
 
   implicit class ProjectFrom(project: Project) {
@@ -28,17 +25,17 @@ object Common {
         .settings(
           organization := "io.kensu",
           name := "redis-streams-zio",
-          scalaVersion := "2.13.5",
+          scalaVersion := "3.1.0",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
-          scalacOptions in (Compile, console) --= Seq("-Wunused:imports", "-Werror"),
-          scalacOptions ++= Seq("-target:11", "--release", "11"),
-          javacOptions ++= Seq("--release", "11"),
-          cancelable in Global := true,
-          parallelExecution in Test := true,
+          Compile / console / scalacOptions --= Seq("-Werror"),
+          scalacOptions ++= Seq("-release:11"),
+          javacOptions ++= Seq("-source", "11", "-target", "11"),
+          Global / cancelable := true,
           fork := true,
-          logBuffered in Test := false,
-          testOptions in Test += Tests.Argument("-oDF"),
+          Test / parallelExecution := true,
+          Test / logBuffered := false,
+          Test / testOptions += Tests.Argument("-oDF"),
           testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
         )
 

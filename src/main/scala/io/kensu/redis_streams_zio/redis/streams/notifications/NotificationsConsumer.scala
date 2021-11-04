@@ -4,14 +4,21 @@ import io.kensu.redis_streams_zio.common.RetryableStreamError
 import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
 import io.kensu.redis_streams_zio.redis.streams.dto.{Event, IncorrectEvent, NotificationAddedEvent}
 import io.kensu.redis_streams_zio.redis.streams.{ReadGroupData, ReadGroupResult, RedisConsumer, StreamInstance}
-import zio._
+import zio.*
 import zio.config.getConfig
 import zio.logging.LogAnnotation.Name
-import zio.logging._
+import zio.logging.*
+import io.kensu.redis_streams_zio.redis.streams.RedisStream
+import zio.clock.Clock
 
-object NotificationsConsumer {
+object NotificationsConsumer:
 
-  def run(shutdownHook: Promise[Throwable, Unit]) =
+  def run(shutdownHook: Promise[Throwable, Unit]): ZIO[
+    Logging & Has[NotificationsStreamConsumerConfig] &
+      Has[RedisStream[StreamInstance.Notifications]] & Has[NotificationsStreamConsumerConfig] & Logging & Clock,
+    Throwable,
+    Long
+  ] =
     log.locally(Name(List(getClass.getName))) {
       RedisConsumer.executeFor[
         Has[NotificationsStreamConsumerConfig],
@@ -30,14 +37,13 @@ object NotificationsConsumer {
       ZIO
         .foreach(data) {
           case ReadGroupData(key, value) =>
-            key match {
+            key match
               case config.addKey =>
                 log.info(s"Parsing add event $msgId") *>
                   ZIO.effect(NotificationAddedEvent(msgId, new String(value.toArray, "UTF-8")))
               case _             =>
                 log.info(s"Received unsupported stream key $key for event $msgId") *>
                   ZIO.effectTotal(IncorrectEvent(msgId))
-            }
         }
         .catchAllCause(ex =>
           log
@@ -46,13 +52,13 @@ object NotificationsConsumer {
         )
     }
 
-  private def eventProcessor(event: Event) = {
+  private def eventProcessor(event: Event) =
     val id = event.streamMessageId
     log.debug(s"Processing event $event") *>
       additionalWork(event)
         .as(id)
         .asSome
-        .catchAll({
+        .catchAll {
           case RetryableStreamError =>
             log
               .warn(s"StreamMessageId $id was not processed successfully, scheduled for pending")
@@ -62,12 +68,9 @@ object NotificationsConsumer {
               .throwable(s"StreamMessageId $id was not processed successfully and can't be retried", t)
               .as(id)
               .asSome
-        })
-  }
+        }
 
-  private def additionalWork(event: Event) = event match {
+  private def additionalWork(event: Event) = event match
     case IncorrectEvent(msgId)                  => Task(s"Nothing to do for event $msgId")
     case NotificationAddedEvent(msgId, payload) =>
       Task.effect(s"Effectfully processed add notification event $msgId with data $payload")
-  }
-}

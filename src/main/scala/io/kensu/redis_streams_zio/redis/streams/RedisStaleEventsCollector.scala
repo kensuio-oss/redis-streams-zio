@@ -3,21 +3,23 @@ package io.kensu.redis_streams_zio.redis.streams
 import io.kensu.redis_streams_zio.common.Scheduling
 import io.kensu.redis_streams_zio.config.StreamConsumerConfig
 import org.redisson.api.StreamMessageId
-import zio._
+import zio.*
 import zio.clock.Clock
 import zio.config.getConfig
-import zio.logging._
+import zio.logging.*
 
-object RedisStaleEventsCollector {
+object RedisStaleEventsCollector:
 
   /**
-   * Builds the Redis claiming logic for problematic messages.
-   * The logic has to be delayed to not clash with stream processor, so we don't process very old
-   * pending messages and also ack them here in the same time.
+   * Builds the Redis claiming logic for problematic messages. The logic has to be delayed to not clash & stream
+   * processor, so we don't process very old pending messages and also ack them here in the same time.
    */
-  def executeFor[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  def executeFor[S <: StreamInstance, C <: StreamConsumerConfig](
     repeatStrategy: Option[Schedule[Any, Any, Unit]] = None
-  ): ZIO[Has[RedisStream[S]] with Has[C] with Logging with Clock, Throwable, Long] =
+  )(
+    using Tag[RedisStream[S]],
+    Tag[C]
+  ): ZIO[Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Long] =
     getConfig[C].flatMap { config =>
       getPendingEvents
         .repeat(
@@ -30,7 +32,10 @@ object RedisStaleEventsCollector {
         .map(_.sum)
     }
 
-  private def getPendingEvents[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag] =
+  private def getPendingEvents[S <: StreamInstance, C <: StreamConsumerConfig](
+    using Tag[RedisStream[S]],
+    Tag[C]
+  ) =
     getConfig[C].flatMap { config =>
       val group    = config.groupName
       val consumer = config.consumerName
@@ -45,20 +50,20 @@ object RedisStaleEventsCollector {
                 .filter(_.getConsumerName != consumer.value)
                 .filter(_.getIdleTime >= conf.maxIdleTime.toMillis)
             )
-            if (all.size > 1) all.take(all.size / 2) else all
+            if all.size > 1 then all.take(all.size / 2) else all
           }.map(_.getId)
           acknowledge(deliveriesExceededMessages.map(_.getId)) *> claim(messagesToClaim)
         }
     }
 
-  private def acknowledge[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  private def acknowledge[S <: StreamInstance, C <: StreamConsumerConfig](
     messageIds: Chunk[StreamMessageId]
-  ) =
+  )(using Tag[RedisStream[S]], Tag[C]) =
     getConfig[C].flatMap { config =>
       val group        = config.groupName
       val batchSize    = messageIds.size
       val commonLogMsg = s"batch of $batchSize messages for group $group"
-      NonEmptyChunk.fromChunk(messageIds) match {
+      NonEmptyChunk.fromChunk(messageIds) match
         case None      => UIO(0L)
         case Some(ids) =>
           log.debug(s"Attempt to acknowledge $commonLogMsg") *>
@@ -68,18 +73,17 @@ object RedisStaleEventsCollector {
                 t => log.throwable(s"Failed to acknowledge $commonLogMsg", t),
                 _ => log.info(s"Successfully acknowledged $commonLogMsg")
               )
-      }
     }
 
-  private def claim[S <: StreamInstance: Tag, C <: StreamConsumerConfig: Tag](
+  private def claim[S <: StreamInstance, C <: StreamConsumerConfig](
     messageIds: Chunk[StreamMessageId]
-  ) =
+  )(using Tag[RedisStream[S]], Tag[C]) =
     getConfig[C].flatMap { config =>
       val group        = config.groupName
       val consumer     = config.consumerName
       val batchSize    = messageIds.size
       val commonLogMsg = s"for group $group to consumer $consumer"
-      NonEmptyChunk.fromChunk(messageIds) match {
+      NonEmptyChunk.fromChunk(messageIds) match
         case None      => UIO(0L)
         case Some(ids) =>
           log.debug(s"Attempt to claim batch of $batchSize messages $commonLogMsg $ids") *>
@@ -90,6 +94,4 @@ object RedisStaleEventsCollector {
                 t => log.throwable(s"Failed to claim $commonLogMsg (maybe an attempt to claim the same resource)", t),
                 size => log.info(s"Successfully claimed batch of $size messages $commonLogMsg")
               )
-      }
     }
-}

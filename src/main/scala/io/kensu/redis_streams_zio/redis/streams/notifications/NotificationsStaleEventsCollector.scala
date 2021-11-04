@@ -4,11 +4,18 @@ import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
 import io.kensu.redis_streams_zio.redis.streams.{RedisStaleEventsCollector, StreamInstance}
 import zio.logging.LogAnnotation.Name
 import zio.logging.log
+import io.kensu.redis_streams_zio.redis.streams.RedisStream
+import zio.{Has, ZIO}
+import zio.clock.Clock
+import zio.logging.Logging
 
-object NotificationsStaleEventsCollector {
+object NotificationsStaleEventsCollector:
 
-  def run() =
+  def run(): ZIO[
+    Logging & Has[RedisStream[StreamInstance.Notifications]] & Has[NotificationsStreamConsumerConfig] & Logging & Clock,
+    Throwable,
+    Long
+  ] =
     log.locally(Name(List(getClass.getName))) {
       RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, NotificationsStreamConsumerConfig]()
     }
-}
