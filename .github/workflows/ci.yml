@@ -17,7 +17,7 @@ jobs:
         with:
           java-version: adopt@1.11
       - name: Coursier cache
-        uses: coursier/cache-action@v5
+        uses: coursier/cache-action@v6.3
       - name: Check formatting
         run: sbt checkFormatAll
       - name: Build and test
