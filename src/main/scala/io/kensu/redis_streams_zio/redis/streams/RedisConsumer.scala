@@ -1,7 +1,5 @@
 package io.kensu.redis_streams_zio.redis.streams
 
-import java.time.Instant
-
 import io.kensu.redis_streams_zio.common.Scheduling
 import io.kensu.redis_streams_zio.config.StreamConsumerConfig
 import org.redisson.api.StreamMessageId
@@ -10,6 +8,8 @@ import zio.clock.*
 import zio.config.getConfig
 import zio.logging.*
 import zio.stream.ZStream
+
+import java.time.Instant
 
 object RedisConsumer:
 
@@ -29,7 +29,14 @@ object RedisConsumer:
         ZStream
           .fromEffect(getEvents[Nothing, S, C](status))
           .flattenChunks
-          .via(eventsProcessor)
+          .groupByKey(_.data.isEmpty) {
+            case (true, stream)  =>
+              stream
+                .tap(r => log.debug(s"Event ${r.messageId} has no value, will skip processing and acknowledge"))
+                .map(r => Some(r.messageId))
+            case (false, stream) =>
+              stream.via(eventsProcessor)
+          }
           .mapM(acknowledge[S, C])
           .repeat(repeatStrategy)
           .haltWhen(shutdownHook)

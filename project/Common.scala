@@ -1,6 +1,6 @@
 import org.scalafmt.sbt.ScalafmtPlugin
 import org.scalafmt.sbt.ScalafmtPlugin.autoImport._
-import sbt.Keys.{logBuffered, _}
+import sbt.Keys._
 import sbt._
 
 object Common {
@@ -25,7 +25,7 @@ object Common {
         .settings(
           organization := "io.kensu",
           name := "redis-streams-zio",
-          scalaVersion := "3.1.0",
+          scalaVersion := "3.1.1",
           version := "1.0.0-SNAPSHOT",
           scalacOptions ++= commonScalacOptions,
           Compile / console / scalacOptions --= Seq("-Werror"),
