@@ -5,17 +5,19 @@ import sbt._
 
 object Common {
 
+  // https://docs.scala-lang.org/scala3/guides/migration/options-lookup.html
+  // Many scalac 2.13 options are not available in scala 3
   private val commonScalacOptions = Seq(
     "-unchecked",
     "-deprecation",
     "-feature",
+    "-Werror",
     "-explain",
     "-new-syntax", // First we need to use -new-syntax with rewrite, in the 2nd step 3.0-migration // Require `then` and `do` in control expressions.
 //    "-indent", // Once done, comment out // Together with -rewrite, remove {...} syntax when possible due to significant indentation.
 //    "-rewrite",
     "-source:future-migration" // Supports given/using etc.
     // "-language:strictEquality"
-//    "-Werror"
   )
 
   implicit class ProjectFrom(project: Project) {
