@@ -110,4 +110,3 @@ object Configs:
 
   val appConfig: Layer[ReadError[String], Has[AppConfig]] =
     read(descriptor[RootConfig].from(TypesafeConfigSource.fromResourcePath)).map(_.kensu).toLayer
-//    TypesafeConfigSource.fromTypesafeConfig(UIO(Config.load()))(descriptor[RootConfig]).narrow(_.kensu)
