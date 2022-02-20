@@ -1,9 +1,9 @@
 version: '3'
 services:
 
-  redis5:
-    image: redis:6.0.8-alpine
-    container_name: redis-streams-zio-redis6
+  redis:
+    image: redis:6.2.6-alpine
+    container_name: redis-streams-zio-redis
     restart: unless-stopped
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
