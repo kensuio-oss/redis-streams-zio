@@ -1,12 +1,12 @@
 package io.kensu.redis_streams_zio.config
 
-import zio.{Has, Layer}
-import zio.config.*
+import com.typesafe.config.Config
 import zio.config.ConfigDescriptor.*
+import zio.config.*
 import zio.config.magnolia.{descriptor, Descriptor}
 import zio.config.typesafe.TypesafeConfig
-import zio.config.ReadError
 import zio.duration.Duration
+import zio.{Has, Layer, UIO}
 
 final case class RootConfig(
   kensu: AppConfig
@@ -106,6 +106,7 @@ final case class NotificationsStreamProducerConfig(
 
 object Configs:
   import zio.config.syntax.*
+  import zio.config.typesafe.*
 
   val appConfig: Layer[ReadError[String], Has[AppConfig]] =
-    TypesafeConfig.fromDefaultLoader(descriptor[RootConfig]).narrow(_.kensu)
+    read(descriptor[RootConfig].from(TypesafeConfigSource.fromResourcePath)).map(_.kensu).toLayer
