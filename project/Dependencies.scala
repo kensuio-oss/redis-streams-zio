@@ -4,7 +4,7 @@ object Dependencies {
 
   object Version {
     val zio       = "1.0.12"
-    val zioConfig = "1.0.10"
+    val zioConfig = "2.0.0"
   }
 
   val zio = Seq(
