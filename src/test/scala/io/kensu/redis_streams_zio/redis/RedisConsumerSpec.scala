@@ -1,17 +1,9 @@
 package io.kensu.redis_streams_zio.redis
 
 import io.kensu.redis_streams_zio.config.*
-import io.kensu.redis_streams_zio.redis.PropertyGenerators.{redisData, *}
-import io.kensu.redis_streams_zio.redis.streams.{
-  CreateGroupStrategy,
-  ListGroupStrategy,
-  ReadGroupResult,
-  RedisConsumer,
-  RedisStream,
-  StreamInstance
-}
-import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
+import io.kensu.redis_streams_zio.redis.PropertyGenerators.*
 import io.kensu.redis_streams_zio.redis.streams.RedisConsumer.StreamInput
+import io.kensu.redis_streams_zio.redis.streams.*
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{StreamGroup, StreamMessageId}
 import zio.*
@@ -264,6 +256,33 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
               .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
         }
       },
+      testM("acknowledge message with an empty value") {
+        checkAllM(promise, redisData(streamKey)) { (shutdownHook, message) =>
+          val messageWithEmptyValue = message.copy(data = Chunk.empty)
+          val redisStreamMock       =
+            NotificationsRedisStreamMock.ListGroups(
+              value(Chunk(new StreamGroup(config.groupName.value, 0, 0, null)))
+            ) ++
+              NotificationsRedisStreamMock.ReadGroup(
+                equalTo(pendingReadGroupCorrectArgs),
+                value(Chunk.single(messageWithEmptyValue))
+              ) ++
+              NotificationsRedisStreamMock.Ack(
+                equalTo((config.groupName, NonEmptyChunk(messageWithEmptyValue.messageId))),
+                value(1)
+              )
+
+          RedisConsumer
+            .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
+              shutdownHook    = shutdownHook,
+              eventsProcessor =
+                failingEventProcessor, // This event processor will not be called for empty value message, thus fail if it used at all
+              repeatStrategy  = Schedule.recurs(0).unit
+            )
+            .map(assert(_)(equalTo(1L)))
+            .provideCustomLayer(testEnv(redisStreamMock))
+        }
+      } @@ TestAspect.nonFlaky,
       testM("retry in case of group listing failure") {
         checkAllM(promise) {
           shutdownHook =>
@@ -456,6 +475,9 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
     redisData: Chunk[ReadGroupResult]
   ) =
     stream.mapM(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
+
+  private def failingEventProcessor(stream: StreamInput[StreamInstance.Notifications, StreamConsumerConfig]) =
+    stream.mapM(_ => IO.fail(new IllegalStateException("I should not be called")))
 
   private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
     ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
