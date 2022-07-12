@@ -3,8 +3,8 @@ import sbt._
 object Dependencies {
 
   object Version {
-    val zio       = "1.0.12"
-    val zioConfig = "2.0.0"
+    val zio       = "1.0.14"
+    val zioConfig = "2.0.4"
   }
 
   val zio = Seq(
@@ -16,10 +16,10 @@ object Dependencies {
     "dev.zio" %% "zio-test-sbt"        % Version.zio % Test
   )
 
-  val redisson = Seq("org.redisson" % "redisson" % "3.16.8")
+  val redisson = Seq("org.redisson" % "redisson" % "3.17.4")
 
   val logback = Seq(
-    "ch.qos.logback" % "logback-classic"  % "1.2.10",
+    "ch.qos.logback" % "logback-classic"  % "1.2.11",
     "org.slf4j"      % "log4j-over-slf4j" % "1.7.36"
   )
 }
