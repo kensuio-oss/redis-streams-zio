@@ -5,9 +5,7 @@ import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
 import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
 import zio.*
 import zio.Schedule.Decision
-import zio.clock.Clock
-import zio.duration.*
-import zio.logging.{Logger, Logging}
+import zio.Clock
 
 trait EventSerializable[E]:
   def serialize(e: E): Array[Byte]
@@ -42,42 +40,41 @@ trait EventProducer[S <: StreamInstance]:
     event: E
   ): Task[PublishedEventId]
 
-final case class RedisEventProducer[S <: StreamInstance: Tag](
-  stream: RedisStream[S],
-  clock: Clock.Service,
-  log: Logger[String]
-) extends EventProducer[S]:
-
-  private val env = Has(clock)
+final case class RedisEventProducer[S <: StreamInstance: Tag](stream: RedisStream[S]) extends EventProducer[S]:
 
   override def publish[E: EventSerializable: Tag](key: StreamKey, event: E): Task[PublishedEventId] =
     stream.streamInstance.map(_.name).flatMap { streamName =>
       val send =
-        log.debug(s"Producing event to $streamName -> $key") *>
+        ZIO.logDebug(s"Producing event to $streamName -> $key") *>
           stream
             .add(key, Chunk.fromArray(EventSerializable[E].serialize(event)))
             .map(redisId => PublishedEventId(redisId.toString))
             .tapBoth(
-              ex => log.throwable(s"Failed to produce an event to $streamName -> $key", ex),
-              msgId => log.info(s"Successfully produced an event to $streamName -> $key. StreamMessageId: $msgId")
+              ex => ZIO.logErrorCause(s"Failed to produce an event to $streamName -> $key", Cause.die(ex)),
+              msgId => ZIO.logInfo(s"Successfully produced an event to $streamName -> $key. StreamMessageId: $msgId")
             )
 
       val retryPolicy =
         Schedule.exponential(3.seconds) *> Schedule
           .recurs(3)
-          .onDecision {
-            case Decision.Done(_)                 => log.warn(s"An event is done retrying publishing")
-            case Decision.Continue(attempt, _, _) => log.info(s"An event will be retried #${attempt + 1}")
+          .onDecision { (attempt, _, decision) => // TODO (attempt???, ???, decision)
+            decision match
+              case Decision.Done        => ZIO.logWarning(s"An event is done retrying publishing")
+              case Decision.Continue(_) => ZIO.logInfo(s"An event will be retried #${attempt + 1}")
           }
 
-      send.retry(retryPolicy).provide(env)
+      send.retry(retryPolicy)
     }
 
 /** An additional, stream instance predefined definition for easier API usage and future refactoring. */
-object NotificationsEventProducer extends Accessible[EventProducer[StreamInstance.Notifications]]:
+object NotificationsEventProducer:
 
   val redis: URLayer[
-    Has[RedisStream[StreamInstance.Notifications]] & Clock & Logging,
-    Has[EventProducer[StreamInstance.Notifications]]
+    RedisStream[StreamInstance.Notifications],
+    EventProducer[StreamInstance.Notifications]
   ] =
-    (RedisEventProducer[StreamInstance.Notifications](_, _, _)).toLayer
+    ZLayer {
+      for {
+        stream <- ZIO.service[RedisStream[StreamInstance.Notifications]]
+      } yield RedisEventProducer[StreamInstance.Notifications](stream)
+    }

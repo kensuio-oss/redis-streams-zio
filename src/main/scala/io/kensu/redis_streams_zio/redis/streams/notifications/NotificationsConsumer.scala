@@ -2,33 +2,28 @@ package io.kensu.redis_streams_zio.redis.streams.notifications
 
 import io.kensu.redis_streams_zio.common.RetryableStreamError
 import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
+import io.kensu.redis_streams_zio.redis.streams.*
 import io.kensu.redis_streams_zio.redis.streams.dto.{Event, IncorrectEvent, NotificationAddedEvent}
-import io.kensu.redis_streams_zio.redis.streams.{ReadGroupData, ReadGroupResult, RedisConsumer, StreamInstance}
 import zio.*
 import zio.config.getConfig
-import zio.logging.LogAnnotation.Name
 import zio.logging.*
-import io.kensu.redis_streams_zio.redis.streams.RedisStream
-import zio.clock.Clock
+import zio.logging.backend.SLF4J
 
 object NotificationsConsumer:
 
   def run(shutdownHook: Promise[Throwable, Unit]): ZIO[
-    Logging & Has[NotificationsStreamConsumerConfig] &
-      Has[RedisStream[StreamInstance.Notifications]] & Has[NotificationsStreamConsumerConfig] & Logging & Clock,
+    NotificationsStreamConsumerConfig & RedisStream[StreamInstance.Notifications] & NotificationsStreamConsumerConfig,
     Throwable,
     Long
   ] =
-    log.locally(Name(List(getClass.getName))) {
-      RedisConsumer.executeFor[
-        Has[NotificationsStreamConsumerConfig],
-        StreamInstance.Notifications,
-        NotificationsStreamConsumerConfig
-      ](
-        shutdownHook    = shutdownHook,
-        eventsProcessor = _.mapM(eventParser).flattenChunks.mapMPar(4)(eventProcessor)
-      )
-    }
+    RedisConsumer.executeFor[
+      NotificationsStreamConsumerConfig,
+      StreamInstance.Notifications,
+      NotificationsStreamConsumerConfig
+    ](
+      shutdownHook    = shutdownHook,
+      eventsProcessor = _.mapZIO(eventParser).flattenChunks.mapZIOPar(4)(eventProcessor)
+    ) @@ SLF4J.loggerName("zio.logging.example.UserOperation")
 
   private def eventParser(rawResult: ReadGroupResult) =
     getConfig[NotificationsStreamConsumerConfig].flatMap { config =>
@@ -39,38 +34,35 @@ object NotificationsConsumer:
           case ReadGroupData(key, value) =>
             key match
               case config.addKey =>
-                log.info(s"Parsing add event $msgId") *>
-                  ZIO.effect(NotificationAddedEvent(msgId, new String(value.toArray, "UTF-8")))
+                ZIO.logInfo(s"Parsing add event $msgId") *>
+                  ZIO.attempt(NotificationAddedEvent(msgId, new String(value.toArray, "UTF-8")))
               case _             =>
-                log.info(s"Received unsupported stream key $key for event $msgId") *>
-                  ZIO.effectTotal(IncorrectEvent(msgId))
+                ZIO.logInfo(s"Received unsupported stream key $key for event $msgId") *>
+                  ZIO.succeed(IncorrectEvent(msgId))
         }
         .catchAllCause(ex =>
-          log
-            .error(s"Failed to deserialize event $msgId", ex)
+          ZIO.logErrorCause(s"Failed to deserialize event $msgId", ex)
             .as(Chunk(IncorrectEvent(msgId)))
         )
     }
 
   private def eventProcessor(event: Event) =
     val id = event.streamMessageId
-    log.debug(s"Processing event $event") *>
+    ZIO.logDebug(s"Processing event $event") *>
       additionalWork(event)
         .as(id)
         .asSome
         .catchAll {
           case RetryableStreamError =>
-            log
-              .warn(s"StreamMessageId $id was not processed successfully, scheduled for pending")
+            ZIO.logWarning(s"StreamMessageId $id was not processed successfully, scheduled for pending")
               .as(None)
           case t                    =>
-            log
-              .throwable(s"StreamMessageId $id was not processed successfully and can't be retried", t)
+            ZIO.logErrorCause(s"StreamMessageId $id was not processed successfully and can't be retried", Cause.die(t))
               .as(id)
               .asSome
         }
 
   private def additionalWork(event: Event) = event match
-    case IncorrectEvent(msgId)                  => Task(s"Nothing to do for event $msgId")
+    case IncorrectEvent(msgId)                  => ZIO.attempt(s"Nothing to do for event $msgId")
     case NotificationAddedEvent(msgId, payload) =>
-      Task.effect(s"Effectfully processed add notification event $msgId with data $payload")
+      ZIO.attempt(s"Effectfully processed add notification event $msgId with data $payload")

@@ -4,40 +4,40 @@ import io.kensu.redis_streams_zio.common.Scheduling
 import io.kensu.redis_streams_zio.config.StreamConsumerConfig
 import org.redisson.api.StreamMessageId
 import zio.*
-import zio.clock.*
 import zio.config.getConfig
 import zio.logging.*
 import zio.stream.ZStream
 
 import java.time.Instant
+import zio.Clock
 
 object RedisConsumer:
 
   type StreamInput[S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, ReadGroupResult]
+    ZStream[RedisStream[S] & C, Throwable, ReadGroupResult]
 
   type StreamOutput[R, S <: StreamInstance, C <: StreamConsumerConfig] =
-    ZStream[R & Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Option[StreamMessageId]]
+    ZStream[R & RedisStream[S] & C, Throwable, Option[StreamMessageId]]
 
   def executeFor[R, S <: StreamInstance, C <: StreamConsumerConfig](
     shutdownHook: Promise[Throwable, Unit],
     eventsProcessor: StreamInput[S, C] => StreamOutput[R, S, C],
     repeatStrategy: Schedule[R, Any, Unit] = Schedule.forever.unit
-  )(using Tag[RedisStream[S]], Tag[C]): ZIO[R & Has[RedisStream[S]] & Has[C] & Logging & Clock, Throwable, Long] =
+  )(using Tag[RedisStream[S]], Tag[C]): ZIO[R & RedisStream[S] & C, Throwable, Long] =
     ZIO.service[C].flatMap { config =>
-      def setupStream(status: RefM[StreamSourceStatus]) =
+      def setupStream(status: Ref.Synchronized[StreamSourceStatus]) =
         ZStream
-          .fromEffect(getEvents[Nothing, S, C](status))
+          .fromZIO(getEvents[Nothing, S, C](status))
           .flattenChunks
           .groupByKey(_.data.isEmpty) {
             case (true, stream)  =>
               stream
-                .tap(r => log.debug(s"Event ${r.messageId} has no value, will skip processing and acknowledge"))
+                .tap(r => ZIO.logDebug(s"Event ${r.messageId} has no value, will skip processing and acknowledge"))
                 .map(r => Some(r.messageId))
             case (false, stream) =>
-              stream.via(eventsProcessor)
+              stream.viaFunction(eventsProcessor)
           }
-          .mapM(acknowledge[S, C])
+          .mapZIO(acknowledge[S, C])
           .repeat(repeatStrategy)
           .haltWhen(shutdownHook)
 
@@ -46,14 +46,14 @@ object RedisConsumer:
         _            <- assureStreamGroup
         result       <- setupStream(streamStatus).runSum
       yield result)
-        .tapCause(t => log.error(s"Failed processing ${config.streamName} stream, will be retried", t))
+        .tapErrorCause(t => ZIO.logErrorCause(s"Failed processing ${config.streamName} stream, will be retried", t))
         .retry(Scheduling.exponentialBackoff(config.retry.min, config.retry.max, config.retry.factor))
     }
 
   private val initialStreamStatus =
-    clock.instant
+    Clock.instant
       .flatMap(t =>
-        RefM.make(
+        Ref.Synchronized.make(
           StreamSourceStatus(
             lastPendingAttempt = t,
             keepPending        = true,
@@ -69,17 +69,17 @@ object RedisConsumer:
     getConfig[C].flatMap { config =>
       val groupName = config.groupName
       for
-        _      <- log.info(s"Looking for Redis group $groupName")
+        _      <- ZIO.logInfo(s"Looking for Redis group $groupName")
         exists <- RedisStream.listGroups[S].map(_.exists(_.getName == groupName.value))
-        res    <- if exists then log.info(s"Redis consumer group $groupName already created")
+        res    <- if exists then ZIO.logInfo(s"Redis consumer group $groupName already created")
                   else
-                    log.info(s"Creating Redis consumer group $groupName") *>
+                    ZIO.logInfo(s"Creating Redis consumer group $groupName") *>
                       RedisStream.createGroup[S](groupName, CreateGroupStrategy.Newest)
       yield res
     }
 
   private def getEvents[R, S <: StreamInstance, C <: StreamConsumerConfig](
-    streamStatus: RefM[StreamSourceStatus]
+    streamStatus: Ref.Synchronized[StreamSourceStatus]
   )(using Tag[RedisStream[S]], Tag[C]) =
     getConfig[C].flatMap { config =>
       val group    = config.groupName
@@ -91,27 +91,27 @@ object RedisConsumer:
           else "new" -> ListGroupStrategy.New
         val commonLogMsg          = s"$logMsgType events for group $group and consumer $consumer"
 
-        log.debug(s"Attempt to check $commonLogMsg") *>
+        ZIO.logDebug(s"Attempt to check $commonLogMsg") *>
           RedisStream
             .readGroup[S](group, consumer, 10, config.readTimeout, msgType)
             .map { events =>
               if checkPending then events.filterNot(e => checkedMessages.contains(e.messageId))
               else events
             }
-            .tap(result => log.info(s"Got ${result.size} $commonLogMsg").when(result.nonEmpty))
-            .tapCause(c => log.error(s"Failed to consume $commonLogMsg", c))
+            .tap(result => ZIO.logInfo(s"Got ${result.size} $commonLogMsg").when(result.nonEmpty))
+            .tapErrorCause(c => ZIO.logErrorCause(s"Failed to consume $commonLogMsg", c))
 
       def shouldCheckPending(status: StreamSourceStatus, currentInstant: Instant) =
         status.keepPending || status.lastPendingAttempt
           .plusMillis(config.checkPendingEvery.toMillis)
           .isBefore(currentInstant)
 
-      streamStatus.modify { oldStatus =>
-        for
-          now         <- clock.instant
+      streamStatus.modifyZIO { oldStatus =>
+        for {
+          now         <- Clock.instant
           checkPending = shouldCheckPending(oldStatus, now)
           events      <- loadEvents(checkPending, oldStatus.checkedMessages)
-        yield
+        } yield {
           val newStatus =
             if checkPending then
               StreamSourceStatus(
@@ -121,6 +121,7 @@ object RedisConsumer:
               )
             else oldStatus.copy(keepPending = false, checkedMessages = Set.empty)
           events -> newStatus
+        }
       }
     }
 
@@ -132,14 +133,14 @@ object RedisConsumer:
       val commonLogMsg = s"for group ${config.groupName} and consumer ${config.consumerName}"
       msgId match
         case Some(redisId) =>
-          log.debug(s"Attempt to acknowledge Redis event $redisId $commonLogMsg") *>
+          ZIO.logDebug(s"Attempt to acknowledge Redis event $redisId $commonLogMsg") *>
             RedisStream
               .ack[S](config.groupName, NonEmptyChunk.single(redisId))
               .tapBoth(
-                t => log.throwable(s"Failed to acknowledge Redis event $redisId $commonLogMsg", t),
-                _ => log.info(s"Successfully acknowledged Redis event $redisId $commonLogMsg")
+                t => ZIO.logErrorCause(s"Failed to acknowledge Redis event $redisId $commonLogMsg", Cause.die(t)),
+                _ => ZIO.logInfo(s"Successfully acknowledged Redis event $redisId $commonLogMsg")
               )
-        case None          => UIO(0L)
+        case None          => ZIO.succeed(0L)
     }
 
   private[streams] case class StreamSourceStatus(

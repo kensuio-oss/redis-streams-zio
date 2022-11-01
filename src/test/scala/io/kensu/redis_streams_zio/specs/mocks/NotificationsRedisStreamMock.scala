@@ -11,10 +11,10 @@ import io.kensu.redis_streams_zio.redis.streams.{
 }
 import org.redisson.api.{PendingEntry, StreamGroup, StreamMessageId}
 import zio.test.mock.*
-import zio.{Chunk, Has, NonEmptyChunk, Task, UIO, URLayer, ZLayer}
-import zio.duration.Duration
+import zio.{Chunk, NonEmptyChunk, Task, UIO, URLayer, ZLayer}
+import zio.Duration
 
-object NotificationsRedisStreamMock extends Mock[Has[RedisStream[StreamInstance.Notifications]]]:
+object NotificationsRedisStreamMock extends Mock[RedisStream[StreamInstance.Notifications]]:
 
   object StreamInstance extends Effect[Unit, Nothing, StreamInstance]
 
@@ -43,8 +43,8 @@ object NotificationsRedisStreamMock extends Mock[Has[RedisStream[StreamInstance.
   object Add extends Effect[(StreamKey, Chunk[Byte]), Throwable, StreamMessageId]
 
   override val compose: URLayer[
-    Has[Proxy],
-    Has[RedisStream[io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications]]
+    Proxy,
+    RedisStream[io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications]
   ] =
     ZLayer.fromServiceM { proxy =>
       withRuntime.as {

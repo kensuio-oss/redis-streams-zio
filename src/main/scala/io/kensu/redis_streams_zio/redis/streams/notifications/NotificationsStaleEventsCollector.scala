@@ -1,21 +1,18 @@
 package io.kensu.redis_streams_zio.redis.streams.notifications
 
 import io.kensu.redis_streams_zio.config.NotificationsStreamConsumerConfig
-import io.kensu.redis_streams_zio.redis.streams.{RedisStaleEventsCollector, StreamInstance}
-import zio.logging.LogAnnotation.Name
-import zio.logging.log
-import io.kensu.redis_streams_zio.redis.streams.RedisStream
-import zio.{Has, ZIO}
-import zio.clock.Clock
-import zio.logging.Logging
+import io.kensu.redis_streams_zio.redis.streams.{RedisStaleEventsCollector, RedisStream, StreamInstance}
+import zio.{Clock, ZIO}
+import zio.logging.backend.SLF4J
 
 object NotificationsStaleEventsCollector:
 
   def run(): ZIO[
-    Logging & Has[RedisStream[StreamInstance.Notifications]] & Has[NotificationsStreamConsumerConfig] & Logging & Clock,
+    RedisStream[StreamInstance.Notifications] & NotificationsStreamConsumerConfig,
     Throwable,
     Long
   ] =
-    log.locally(Name(List(getClass.getName))) {
-      RedisStaleEventsCollector.executeFor[StreamInstance.Notifications, NotificationsStreamConsumerConfig]()
-    }
+    RedisStaleEventsCollector.executeFor[
+      StreamInstance.Notifications,
+      NotificationsStreamConsumerConfig
+    ]() @@ SLF4J.loggerName(getClass.getName)

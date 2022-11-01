@@ -5,8 +5,7 @@ import zio.config.ConfigDescriptor.*
 import zio.config.*
 import zio.config.magnolia.{descriptor, Descriptor}
 import zio.config.typesafe.TypesafeConfig
-import zio.duration.Duration
-import zio.{Has, Layer, UIO}
+import zio.*
 
 final case class RootConfig(
   kensu: AppConfig
@@ -108,5 +107,5 @@ object Configs:
   import zio.config.syntax.*
   import zio.config.typesafe.*
 
-  val appConfig: Layer[ReadError[String], Has[AppConfig]] =
-    read(descriptor[RootConfig].from(TypesafeConfigSource.fromResourcePath)).map(_.kensu).toLayer
+  val appConfig: Layer[ReadError[String], AppConfig] =
+    ZLayer.fromZIO(read(descriptor[RootConfig].from(TypesafeConfigSource.fromResourcePath)).map(_.kensu))
