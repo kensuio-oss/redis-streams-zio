@@ -10,21 +10,15 @@ import io.kensu.redis_streams_zio.redis.streams.{
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{PendingEntry, StreamMessageId}
 import zio.*
-import zio.Clock
-import zio.duration.{durationInt, Duration}
-import zio.logging.Logging
-import zio.test.*
 import zio.test.Assertion.*
-import zio.test.environment.TestEnvironment
-import zio.test.mock.Expectation.*
-import zio.test.ZIOSpecDefault
+import zio.mock.Expectation.*
+import zio.test.*
 
 object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
 
   import TestData.*
 
-  override val spec: ZSpec[TestEnvironment, Failure] =
-    
+  override val spec =
     suite("RedisZCollector.executeFor")(
       test("does not begin processing before initial delay") {
         val redisStreamMock =
@@ -36,7 +30,7 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(config.claiming.initialDelay.minusMillis(1))
           _      <- forked.interrupt
         yield assertCompletes)
-          .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          .provideLayer(testEnv(redisStreamMock))
       },
       test("begin processing after initial delay") {
         val redisStreamMock =
@@ -49,7 +43,7 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         yield assertCompletes)
-          .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          .provideLayer(testEnv(redisStreamMock))
       },
       test("claim only messages & exceeded idle time from other consumers") {
         val goodEntry                          = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
@@ -88,7 +82,7 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         yield assertCompletes)
-          .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          .provideLayer(testEnv(redisStreamMock))
       },
       test("claim only half of suitable messages") {
         val exceededIdleTimeEntry1 = new PendingEntry(
@@ -126,7 +120,7 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         yield assertCompletes)
-          .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          .provideLayer(testEnv(redisStreamMock))
       },
       test("can keep repeating the claiming process") {
         val exceededIdleTimeEntry1 = new PendingEntry(
@@ -180,7 +174,7 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.join
         yield assertCompletes)
-          .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          .provideLayer(testEnv(redisStreamMock))
       },
       test("acknowledge only messages with exceeded number of deliveries") {
         val goodEntry                          = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
@@ -217,7 +211,7 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.interrupt
         yield assertCompletes)
-          .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          .provideLayer(testEnv(redisStreamMock))
       },
       test("can keep repeating the acknowledge process") {
         val goodEntry                          = new PendingEntry(new StreamMessageId(412323), config.consumerName.value, 1, 0)
@@ -264,12 +258,12 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(config.claiming.initialDelay)
           _      <- forked.join
         yield assertCompletes)
-          .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          .provideLayer(testEnv(redisStreamMock))
       }
     ) @@ TestAspect.timeout(30.seconds)
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.service[Clock] ++ Logging.ignore
+    ZLayer.succeed(config) ++ redisStreamMock
 
   private object TestData:
 

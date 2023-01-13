@@ -72,7 +72,7 @@ object RedisStaleEventsCollector:
             RedisStream
               .ack[S](group, ids)
               .tapBoth(
-                t => ZIO.logErrorCause(s"Failed to acknowledge $commonLogMsg", Cause.die(t)),
+                t => ZIO.logErrorCause(s"Failed to acknowledge $commonLogMsg", Cause.fail(t)),
                 _ => ZIO.logInfo(s"Successfully acknowledged $commonLogMsg")
               )
     }
@@ -96,7 +96,7 @@ object RedisStaleEventsCollector:
                 t =>
                   ZIO.logErrorCause(
                     s"Failed to claim $commonLogMsg (maybe an attempt to claim the same resource)",
-                    Cause.die(t)
+                    Cause.fail(t)
                   ),
                 size => ZIO.logInfo(s"Successfully claimed batch of $size messages $commonLogMsg")
               )

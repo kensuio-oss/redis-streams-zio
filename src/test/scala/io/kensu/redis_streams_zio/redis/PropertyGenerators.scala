@@ -13,14 +13,14 @@ import zio.test.Gen.string
 object PropertyGenerators:
 
   val promise: Gen[Any, Promise[Throwable, Unit]]   = fromZIO(Promise.make[Throwable, Unit])
-  val streamMessageId: Gen[Random, StreamMessageId] = long(1L, 99999999999L).map(new StreamMessageId(_))
+  val streamMessageId: Gen[Any, StreamMessageId] = long(1L, 99999999999L).map(new StreamMessageId(_))
 
   def redisData(
     streamKey: StreamKey
-  ): Gen[Random & Sized, ReadGroupResult] =
+  ): Gen[Any, ReadGroupResult] =
     (string <*> streamMessageId).map { (msg, msgId) =>
       ReadGroupResult(msgId, Chunk(ReadGroupData(streamKey, Chunk.fromArray(msg.getBytes("UTF-8")))))
     }
 
-  def uniqueRedisData(streamKey: StreamKey): Gen[Random & Sized, (ReadGroupResult, ReadGroupResult)] =
-    (redisData(streamKey) <&> redisData(streamKey)).filter((a, b) => a.messageId != b.messageId)
+  def uniqueRedisData(streamKey: StreamKey): Gen[Any, (ReadGroupResult, ReadGroupResult)] =
+    redisData(streamKey).zip(redisData(streamKey)).filter((a, b) => a.messageId != b.messageId)

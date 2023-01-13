@@ -24,6 +24,9 @@ object PublishedEventId:
 
 trait EventProducer[S <: StreamInstance]:
 
+  //TODO replace `Tag` with `EnvironmentTag`?
+  //  https://github.com/zio/zio-mock/blob/master/examples/shared/src/main/scala-2/zio/mock/examples/MockableMacroExample.scala
+
   /**
    * Publishes a message.
    * @param streamKey
@@ -50,7 +53,7 @@ final case class RedisEventProducer[S <: StreamInstance: Tag](stream: RedisStrea
             .add(key, Chunk.fromArray(EventSerializable[E].serialize(event)))
             .map(redisId => PublishedEventId(redisId.toString))
             .tapBoth(
-              ex => ZIO.logErrorCause(s"Failed to produce an event to $streamName -> $key", Cause.die(ex)),
+              ex => ZIO.logErrorCause(s"Failed to produce an event to $streamName -> $key", Cause.fail(ex)),
               msgId => ZIO.logInfo(s"Successfully produced an event to $streamName -> $key. StreamMessageId: $msgId")
             )
 

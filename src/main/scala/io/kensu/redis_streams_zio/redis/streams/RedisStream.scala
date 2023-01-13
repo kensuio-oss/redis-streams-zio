@@ -61,7 +61,7 @@ trait RedisStream[S <: StreamInstance]:
 
   def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId]
 
-private[streams] final class RedissonRedisStream[S <: StreamInstance](
+final case class RedissonRedisStream[S <: StreamInstance](
   instance: S,
   redisson: RedissonClient
 ) extends RedisStream[S]:
@@ -206,10 +206,4 @@ object NotificationsRedisStream:
   val redisson: URLayer[
     StreamInstance.Notifications & RedissonClient,
     RedisStream[StreamInstance.Notifications]
-  ] =
-    ZLayer {
-      for {
-        redissonClient <- ZIO.service[RedissonClient]
-        streamInstance <- ZIO.service[StreamInstance.Notifications]
-      } yield new RedissonRedisStream[StreamInstance.Notifications](streamInstance, redissonClient)
-    }
+  ] = ZLayer.fromFunction(RedissonRedisStream[StreamInstance.Notifications].apply)

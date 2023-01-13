@@ -7,15 +7,12 @@ import io.kensu.redis_streams_zio.redis.streams.NotificationsRedisStream
 import io.kensu.redis_streams_zio.redis.streams.{RedisStream, StreamInstance}
 import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.StreamMessageId
-import zio.{Chunk, ULayer, ZLayer}
-import zio.clock.*
 
-import zio.logging.Logging
 import zio.test.*
 import zio.test.Assertion.*
-import zio.test.environment.TestEnvironment
-import zio.test.mock.Expectation.*
-import zio._
+import zio.test.TestEnvironment
+import zio.mock.Expectation.*
+import zio.*
 import zio.Clock.currentTime
 import zio.test.ZIOSpecDefault
 
@@ -24,9 +21,9 @@ object EventProducerSpec extends ZIOSpecDefault:
   import TestData.*
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    (redisStreamMock ++ ZLayer.service[Clock] ++ Logging.ignore) >>> NotificationsEventProducer.redis
+    redisStreamMock >>> NotificationsEventProducer.redis
 
-  override def spec: ZSpec[TestEnvironment, Failure] =
+  override val spec =
     suite("EventProducer.redis")(
       suite("publish")(
         test("fail if cannot send an event") {
@@ -51,14 +48,17 @@ object EventProducerSpec extends ZIOSpecDefault:
 
           (for
             timeBefore <- currentTime(TimeUnit.SECONDS)
-            forked     <- NotificationsEventProducer(_.publish(testStreamKey, testEvent)).exit.fork
+            forked     <- ZIO.serviceWithZIO[EventProducer[StreamInstance.Notifications]](_.publish(
+                            testStreamKey,
+                            testEvent
+                          )).exit.fork
             _          <- TestClock.adjust(21.seconds) // 3 retries for 3 sec exponential * 2
             msg        <- forked.join
             timeAfter  <- currentTime(TimeUnit.SECONDS)
           yield {
             assert(msg)(fails(isSubtype[RuntimeException](anything))) &&
             assert(timeAfter - timeBefore)(isGreaterThanEqualTo(21L))
-          }).provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+          }).provideLayer(testEnv(redisStreamMock))
         },
         test("succeed if can send an event") {
           val redisStreamMock =
@@ -68,9 +68,9 @@ object EventProducerSpec extends ZIOSpecDefault:
                 value(new StreamMessageId(123L, 456L))
               )
 
-          NotificationsEventProducer(_.publish(testStreamKey, testEvent))
+          ZIO.serviceWithZIO[EventProducer[StreamInstance.Notifications]](_.publish(testStreamKey, testEvent))
             .map(createdMsgId => assert(createdMsgId)(equalTo(PublishedEventId("123-456"))))
-            .provideCustomLayer(testEnv(redisStreamMock))
+            .provideLayer(testEnv(redisStreamMock))
         }
       )
     )

@@ -10,9 +10,9 @@ import io.kensu.redis_streams_zio.redis.streams.{
   StreamInstance
 }
 import org.redisson.api.{PendingEntry, StreamGroup, StreamMessageId}
-import zio.test.mock.*
+import zio.mock.*
 import zio.{Chunk, NonEmptyChunk, Task, UIO, URLayer, ZLayer}
-import zio.Duration
+import zio.*
 
 object NotificationsRedisStreamMock extends Mock[RedisStream[StreamInstance.Notifications]]:
 
@@ -46,44 +46,44 @@ object NotificationsRedisStreamMock extends Mock[RedisStream[StreamInstance.Noti
     Proxy,
     RedisStream[io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications]
   ] =
-    ZLayer.fromServiceM { proxy =>
-      withRuntime.as {
-        new RedisStream[io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications] {
+    ZLayer {
+      for {
+        proxy <- ZIO.service[Proxy]
+      } yield new RedisStream[io.kensu.redis_streams_zio.redis.streams.StreamInstance.Notifications] {
 
-          override val streamInstance: UIO[StreamInstance] =
-            proxy(StreamInstance)
+        override val streamInstance: UIO[StreamInstance] =
+          proxy(StreamInstance)
 
-          override def listGroups: Task[Chunk[StreamGroup]] =
-            proxy(ListGroups)
+        override def listGroups: Task[Chunk[StreamGroup]] =
+          proxy(ListGroups)
 
-          override def createGroup(groupName: StreamGroupName, strategy: CreateGroupStrategy): Task[Unit] =
-            proxy(CreateGroup, groupName, strategy)
+        override def createGroup(groupName: StreamGroupName, strategy: CreateGroupStrategy): Task[Unit] =
+          proxy(CreateGroup, groupName, strategy)
 
-          override def readGroup(
-            groupName: StreamGroupName,
-            consumerName: StreamConsumerName,
-            count: Int,
-            timeout: Duration,
-            strategy: ListGroupStrategy
-          ): Task[Chunk[ReadGroupResult]] =
-            proxy(ReadGroup, groupName, consumerName, count, timeout, strategy)
+        override def readGroup(
+          groupName: StreamGroupName,
+          consumerName: StreamConsumerName,
+          count: Int,
+          timeout: Duration,
+          strategy: ListGroupStrategy
+        ): Task[Chunk[ReadGroupResult]] =
+          proxy(ReadGroup, groupName, consumerName, count, timeout, strategy)
 
-          override def ack(groupName: StreamGroupName, ids: NonEmptyChunk[StreamMessageId]): Task[Long] =
-            proxy(Ack, groupName, ids)
+        override def ack(groupName: StreamGroupName, ids: NonEmptyChunk[StreamMessageId]): Task[Long] =
+          proxy(Ack, groupName, ids)
 
-          override def fastClaim(
-            groupName: StreamGroupName,
-            consumerName: StreamConsumerName,
-            maxIdleTime: Duration,
-            ids: NonEmptyChunk[StreamMessageId]
-          ): Task[Chunk[StreamMessageId]] =
-            proxy(FastClaim, groupName, consumerName, maxIdleTime, ids)
+        override def fastClaim(
+          groupName: StreamGroupName,
+          consumerName: StreamConsumerName,
+          maxIdleTime: Duration,
+          ids: NonEmptyChunk[StreamMessageId]
+        ): Task[Chunk[StreamMessageId]] =
+          proxy(FastClaim, groupName, consumerName, maxIdleTime, ids)
 
-          override def listPending(groupName: StreamGroupName, count: Int): Task[Chunk[PendingEntry]] =
-            proxy(ListPending, groupName, count)
+        override def listPending(groupName: StreamGroupName, count: Int): Task[Chunk[PendingEntry]] =
+          proxy(ListPending, groupName, count)
 
-          override def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId] =
-            proxy(Add, key, payload)
-        }
+        override def add(key: StreamKey, payload: Chunk[Byte]): Task[StreamMessageId] =
+          proxy(Add, key, payload)
       }
     }

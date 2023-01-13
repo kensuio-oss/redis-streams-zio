@@ -137,7 +137,7 @@ object RedisConsumer:
             RedisStream
               .ack[S](config.groupName, NonEmptyChunk.single(redisId))
               .tapBoth(
-                t => ZIO.logErrorCause(s"Failed to acknowledge Redis event $redisId $commonLogMsg", Cause.die(t)),
+                t => ZIO.logErrorCause(s"Failed to acknowledge Redis event $redisId $commonLogMsg", Cause.fail(t)),
                 _ => ZIO.logInfo(s"Successfully acknowledged Redis event $redisId $commonLogMsg")
               )
         case None          => ZIO.succeed(0L)

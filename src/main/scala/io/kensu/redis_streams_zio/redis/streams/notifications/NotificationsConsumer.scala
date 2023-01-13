@@ -12,18 +12,14 @@ import zio.logging.backend.SLF4J
 object NotificationsConsumer:
 
   def run(shutdownHook: Promise[Throwable, Unit]): ZIO[
-    NotificationsStreamConsumerConfig & RedisStream[StreamInstance.Notifications] & NotificationsStreamConsumerConfig,
+    RedisStream[StreamInstance.Notifications] & NotificationsStreamConsumerConfig,
     Throwable,
     Long
   ] =
-    RedisConsumer.executeFor[
-      NotificationsStreamConsumerConfig,
-      StreamInstance.Notifications,
-      NotificationsStreamConsumerConfig
-    ](
+    RedisConsumer.executeFor[Any, StreamInstance.Notifications, NotificationsStreamConsumerConfig](
       shutdownHook    = shutdownHook,
       eventsProcessor = _.mapZIO(eventParser).flattenChunks.mapZIOPar(4)(eventProcessor)
-    ) @@ SLF4J.loggerName("zio.logging.example.UserOperation")
+    ) @@ SLF4J.loggerName(getClass.getName)
 
   private def eventParser(rawResult: ReadGroupResult) =
     getConfig[NotificationsStreamConsumerConfig].flatMap { config =>
@@ -57,7 +53,7 @@ object NotificationsConsumer:
             ZIO.logWarning(s"StreamMessageId $id was not processed successfully, scheduled for pending")
               .as(None)
           case t                    =>
-            ZIO.logErrorCause(s"StreamMessageId $id was not processed successfully and can't be retried", Cause.die(t))
+            ZIO.logErrorCause(s"StreamMessageId $id was not processed successfully and can't be retried", Cause.fail(t))
               .as(id)
               .asSome
         }

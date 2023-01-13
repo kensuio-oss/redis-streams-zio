@@ -9,20 +9,18 @@ import org.redisson.api.{StreamGroup, StreamMessageId}
 import zio.*
 import zio.Schedule.Decision
 import zio.Clock
-import zio.duration.{durationInt, Duration}
-import zio.logging.Logging
+import zio.{durationInt, Duration}
 import zio.test.*
 import zio.test.Assertion.*
-import zio.test.environment.TestEnvironment
-import zio.test.mock.Expectation.*
-import zio.test.{ TestClock, ZIOSpecDefault }
+import zio.test.TestEnvironment
+import zio.mock.Expectation.*
+import zio.test.{TestClock, ZIOSpecDefault}
 
 object RedisConsumerSpec extends ZIOSpecDefault:
 
   import TestData.*
 
-  override val spec: ZSpec[TestEnvironment, Failure] =
-    
+  override val spec =
     suite("RedisZStream.executeFor")(
       test("reuse consumer group if the requested one exists") {
         checkAll(promise) {
@@ -40,7 +38,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("create consumer group if there is no one available") {
@@ -61,7 +59,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("create consumer group if there is no requested one available") {
@@ -82,7 +80,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("get PENDING messages initially") {
@@ -101,7 +99,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("get PENDING messages initially, keep asking till asked for all and then ask for NEW messages") {
@@ -137,7 +135,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.recurs(3).unit
               )
               .map(assert(_)(equalTo(2L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("do not process the same PENDING messages in case they cannot be acknowledged") {
@@ -163,7 +161,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.once
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("keep getting NEW messages") {
@@ -193,7 +191,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.recurs(3).unit
               )
               .map(assert(_)(equalTo(2L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("keep getting NEW messages even if some are not acknowledged") {
@@ -224,7 +222,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 repeatStrategy  = Schedule.recurs(3).unit
               )
               .map(assert(_)(equalTo(1L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("get PENDING messages every defined period") {
@@ -239,22 +237,21 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
                 NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
-            def stream(clock: TestClock) =
+            val stream =
               RedisConsumer
                 .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
                   repeatStrategy  = Schedule
                     .recurs(3)
-                    .onDecision(_ => clock.adjust(config.checkPendingEvery.plusSeconds(1)))
+                    .onDecision((_, _, _) => TestClock.adjust(config.checkPendingEvery.plusSeconds(1)))
                     .unit
                 )
 
             (for
-              clock  <- ZIO.service[TestClock]
-              result <- stream(clock)
+              result <- stream
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("acknowledge message with an empty value") {
@@ -281,7 +278,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
               repeatStrategy  = Schedule.recurs(0).unit
             )
             .map(assert(_)(equalTo(1L)))
-            .provideCustomLayer(testEnv(redisStreamMock))
+            .provideLayer(testEnv(redisStreamMock))
         }
       } @@ TestAspect.nonFlaky,
       test("retry in case of group listing failure") {
@@ -310,7 +307,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("retry in case of group creation failure") {
@@ -342,7 +339,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("retry in case of group reading failure") {
@@ -375,7 +372,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("retry in case of acknowledge failure") {
@@ -416,7 +413,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(1L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
       test("triggering the shutdown hook will stop stream processing") {
@@ -451,9 +448,10 @@ object RedisConsumerSpec extends ZIOSpecDefault:
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
                 repeatStrategy  = Schedule.forever
-                  .onDecision {
-                    case Decision.Continue(attempt, _, _) if attempt == 1 => shutdownHook.succeed(())
-                    case _                                                => ZIO.unit
+                  .onDecision { (attempt, l, decision) =>
+                    decision match
+                      case Decision.Continue(_) if attempt == 1 => shutdownHook.succeed(())
+                      case _                                    => ZIO.unit
                   }
                   .unit
               )
@@ -463,7 +461,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
               _      <- shutdownHook.await
               _      <- forked.join
             yield assertCompletes)
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       }
     ) @@ TestAspect.timeout(30.seconds)
@@ -481,7 +479,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
     stream.mapZIO(_ => ZIO.fail(new IllegalStateException("I should not be called")))
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.service[Clock] ++ Logging.ignore
+    ZLayer.succeed(config) ++ redisStreamMock
 
   private[redis] case class TestEvent(
     id: StreamMessageId,
