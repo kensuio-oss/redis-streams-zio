@@ -12,8 +12,8 @@ import zio.test.Gen.string
 
 object PropertyGenerators:
 
-  val promise: Gen[Any, Promise[Throwable, Unit]]   = fromZIO(Promise.make[Throwable, Unit])
-  val streamMessageId: Gen[Any, StreamMessageId] = long(1L, 99999999999L).map(new StreamMessageId(_))
+  val promise: Gen[Any, Promise[Throwable, Unit]] = fromZIO(Promise.make[Throwable, Unit])
+  val streamMessageId: Gen[Any, StreamMessageId]  = long(1L, 99999999999L).map(new StreamMessageId(_))
 
   def redisData(
     streamKey: StreamKey

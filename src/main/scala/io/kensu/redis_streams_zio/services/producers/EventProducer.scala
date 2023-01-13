@@ -24,7 +24,7 @@ object PublishedEventId:
 
 trait EventProducer[S <: StreamInstance]:
 
-  //TODO replace `Tag` with `EnvironmentTag`?
+  // TODO replace `Tag` with `EnvironmentTag`?
   //  https://github.com/zio/zio-mock/blob/master/examples/shared/src/main/scala-2/zio/mock/examples/MockableMacroExample.scala
 
   /**
