@@ -13,30 +13,27 @@ import zio.{Clock, ZIOAppDefault, *}
 object Consumer extends ZIOAppDefault:
 
   private val streams =
-    ZIO.scoped {
-      ZIO.acquireRelease { // FIXME acquireReleaseInterruptible
-        for
-          shutdownHook            <- Promise.make[Throwable, Unit]
-          notificationStreamFiber <- notificationsStream(shutdownHook)
-        yield (shutdownHook, notificationStreamFiber)
-      } { (shutdownHook, notificationStreamFiber) =>
-        (for
-          _ <- ZIO.logInfo("Halting streams")
-          _ <- shutdownHook.succeed(())
-          _ <- shutdownHook.await
-          _ <- ZIO.logInfo("Shutting down streams... this may take a few seconds")
-          _ <- notificationStreamFiber.join `race` ZIO.sleep(5.seconds)
-          _ <- ZIO.logInfo("Streams shut down")
-        yield ()).ignore
-      }
-
-//      for {
-//        shutdownHook <- ZIO.acquireRelease(Promise.make[Throwable, Unit])(hook =>
-//                          hook.succeed(()) *> ZIO.logInfo("Streams shut down")
-//                        )
-//        _            <- notificationsStream(shutdownHook)
-//      } yield ()
-    }
+//    ZIO.acquireRelease { // FIXME acquireReleaseInterruptible?
+//      for
+//        shutdownHook            <- Promise.make[Throwable, Unit]
+//        notificationStreamFiber <- notificationsStream(shutdownHook)
+//      yield (shutdownHook, notificationStreamFiber)
+//    } { (shutdownHook, notificationStreamFiber) =>
+//      (for
+//        _ <- ZIO.logInfo("Halting streams")
+//        _ <- shutdownHook.succeed(())
+//        _ <- shutdownHook.await
+//        _ <- ZIO.logInfo("Shutting down streams... this may take a few seconds")
+//        _ <- notificationStreamFiber.join `race` ZIO.sleep(5.seconds)
+//        _ <- ZIO.logInfo("Streams shut down")
+//      yield ()).ignore
+//    }.unit
+    for {
+      shutdownHook <- ZIO.acquireRelease(Promise.make[Throwable, Unit])(hook =>
+                        hook.succeed(()) *> ZIO.logInfo("Shutting down streams... this may take a moment")
+                      )
+      _            <- notificationsStream(shutdownHook)
+    } yield ()
 
   private def notificationsStream(shutdownHook: Promise[Throwable, Unit]) =
     for
@@ -44,7 +41,6 @@ object Consumer extends ZIOAppDefault:
       _    <- NotificationsStaleEventsCollector.run().fork
     yield fork
 
-//  override val bootstrap =
   private val liveEnv =
     val appConfig = Configs.appConfig
 
@@ -71,7 +67,4 @@ object Consumer extends ZIOAppDefault:
       notificationsStream
     )
 
-  override val run =
-    streams.provideLayer(liveEnv) // TODO layer is bootstrap now
-      .forever // FIXME useForever?
-      .exitCode
+  override val run = ZIO.scoped(streams *> ZIO.never).provideLayer(liveEnv)

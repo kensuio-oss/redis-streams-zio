@@ -22,8 +22,8 @@ object RedisClient:
             .setPassword(config.password)
           Redisson.create(redissonConfig);
         }
-      )(c => ZIO.attempt(c.shutdown()).orDie)
+      )(c => ZIO.logInfo("Shutting down Redisson") *> ZIO.attempt(c.shutdown()).orDie)
     }
 
   def getStream[K, V](name: StreamName): ZIO[RedissonClient, Nothing, RStream[K, V]] =
-    ZIO.serviceWith[RedissonClient](_.getStream[K, V](name.value)) // TODO serviceWithZIO ?
+    ZIO.serviceWith[RedissonClient](_.getStream[K, V](name.value))

@@ -13,17 +13,7 @@ import zio.{Clock, Random, ZIOAppDefault, *}
 
 object Producer extends ZIOAppDefault:
 
-  override def run =
-    sentNotification
-      .repeat(Schedule.spaced(5.seconds).jittered)
-      .provideLayer(liveEnv)
-      .exitCode
-
-  val sentNotification: ZIO[
-    NotificationsStreamProducerConfig & EventProducer[StreamInstance.Notifications],
-    Throwable,
-    Unit
-  ] =
+  private val sentNotification =
     for
       config <- getConfig[NotificationsStreamProducerConfig]
       str    <- nextString(10)
@@ -52,4 +42,14 @@ object Producer extends ZIOAppDefault:
 
       (redisStream ++ logging) >>> NotificationsEventProducer.redis
 
-    logging ++ producerConfig ++ notificationsStream
+
+    ZLayer.make[NotificationsStreamProducerConfig & EventProducer[StreamInstance.Notifications]](
+      logging,
+      producerConfig,
+      notificationsStream
+    )
+
+  override val run =
+    sentNotification
+      .repeat(Schedule.spaced(5.seconds).jittered)
+      .provideLayer(liveEnv)

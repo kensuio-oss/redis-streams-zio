@@ -52,10 +52,10 @@ object RedisConsumer:
 
   private val initialStreamStatus =
     Clock.instant
-      .flatMap(t =>
+      .flatMap(now =>
         Ref.Synchronized.make(
           StreamSourceStatus(
-            lastPendingAttempt = t,
+            lastPendingAttempt = now,
             keepPending        = true,
             checkedMessages    = Set.empty
           )
