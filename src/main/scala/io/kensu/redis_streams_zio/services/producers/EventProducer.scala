@@ -24,9 +24,6 @@ object PublishedEventId:
 
 trait EventProducer[S <: StreamInstance]:
 
-  // TODO replace `Tag` with `EnvironmentTag`?
-  //  https://github.com/zio/zio-mock/blob/master/examples/shared/src/main/scala-2/zio/mock/examples/MockableMacroExample.scala
-
   /**
    * Publishes a message.
    * @param streamKey
@@ -60,9 +57,9 @@ final case class RedisEventProducer[S <: StreamInstance: Tag](stream: RedisStrea
       val retryPolicy =
         Schedule.exponential(3.seconds) *> Schedule
           .recurs(3)
-          .onDecision { (attempt, _, decision) => // TODO (attempt???, ???, decision)
+          .onDecision { (attempt, _, decision) =>
             decision match
-              case Decision.Done        => ZIO.logWarning(s"An event is done retrying publishing")
+              case Decision.Done        => ZIO.logWarning(s"An event is done retrying publishing").when(attempt > 0)
               case Decision.Continue(_) => ZIO.logInfo(s"An event will be retried #${attempt + 1}")
           }
 
