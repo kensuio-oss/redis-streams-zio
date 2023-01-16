@@ -13,27 +13,9 @@ import zio.{Clock, ZIOAppDefault, *}
 object Consumer extends ZIOAppDefault:
 
   private val streams =
-//    ZIO.acquireRelease { // FIXME acquireReleaseInterruptible?
-//      for
-//        shutdownHook            <- Promise.make[Throwable, Unit]
-//        notificationStreamFiber <- notificationsStream(shutdownHook)
-//      yield (shutdownHook, notificationStreamFiber)
-//    } { (shutdownHook, notificationStreamFiber) =>
-//      (for
-//        _ <- ZIO.logInfo("Halting streams")
-//        _ <- shutdownHook.succeed(())
-//        _ <- shutdownHook.await
-//        _ <- ZIO.logInfo("Shutting down streams... this may take a few seconds")
-//        _ <- notificationStreamFiber.join `race` ZIO.sleep(5.seconds)
-//        _ <- ZIO.logInfo("Streams shut down")
-//      yield ()).ignore
-//    }.unit
-    for {
-      shutdownHook <- ZIO.acquireRelease(Promise.make[Throwable, Unit])(hook =>
-                        hook.succeed(()) *> ZIO.logInfo("Shutting down streams... this may take a moment")
-                      )
-      _            <- notificationsStream(shutdownHook)
-    } yield ()
+    ZIO.acquireRelease(Promise.make[Throwable, Unit])(hook =>
+      hook.succeed(()) *> ZIO.logInfo("Shutting down streams... this may take a moment")
+    ).flatMap(notificationsStream)
 
   private def notificationsStream(shutdownHook: Promise[Throwable, Unit]) =
     for
@@ -44,13 +26,6 @@ object Consumer extends ZIOAppDefault:
   private val liveEnv =
     val appConfig = Configs.appConfig
 
-//    val logging: ULayer[Logging] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j(
-//      mdcAnnotations = List(KensuLogAnnotation.CorrelationId),
-//      logFormat      = (_, msg) => msg
-//    ) >>> Logging.modifyLogger(_.derive(KensuLogAnnotation.InitialLogContext))
-
-    // https://zio.dev/guides/migrate/zio-2.x-migration-guide/#custom-runtime-for-mixed-applications
-    // TODO Seems logger is built in the runtime, we replace it, when needed to reference use ZLogger[String, Any]. Or nothing?
     val logging = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
     val redisClient = appConfig.narrow(_.redis) >>> RedisClient.live
@@ -67,4 +42,4 @@ object Consumer extends ZIOAppDefault:
       notificationsStream
     )
 
-  override val run = ZIO.scoped(streams *> ZIO.never).provideLayer(liveEnv)
+  override val run = ZIO.scoped(streams *> ZIO.never).provideLayer(liveEnv) @@ KensuLogAnnotation.InitialLogContext

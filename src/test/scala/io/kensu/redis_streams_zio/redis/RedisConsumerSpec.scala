@@ -479,7 +479,7 @@ object RedisConsumerSpec extends ZIOSpecDefault:
     stream.mapZIO(_ => ZIO.fail(new IllegalStateException("I should not be called")))
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    ZLayer.succeed(config) ++ redisStreamMock
+    (Runtime.removeDefaultLoggers ++ ZLayer.succeed(config)) ++ redisStreamMock
 
   private[redis] case class TestEvent(
     id: StreamMessageId,

@@ -21,7 +21,7 @@ object EventProducerSpec extends ZIOSpecDefault:
   import TestData.*
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    redisStreamMock >>> NotificationsEventProducer.redis
+    (Runtime.removeDefaultLoggers ++ redisStreamMock) >>> NotificationsEventProducer.redis
 
   override val spec =
     suite("EventProducer.redis")(

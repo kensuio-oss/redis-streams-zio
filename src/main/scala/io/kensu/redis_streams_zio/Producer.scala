@@ -9,7 +9,8 @@ import zio.Random.nextString
 import zio.config.getConfig
 import zio.config.syntax.*
 import zio.logging.backend.SLF4J
-import zio.{Clock, Random, ZIOAppDefault, *}
+import zio.logging.backend.SLF4J.loggerNameAnnotationKey
+import zio.{Clock, Random, ZIOAppDefault, ZIOAspect, *}
 
 object Producer extends ZIOAppDefault:
 
@@ -24,11 +25,6 @@ object Producer extends ZIOAppDefault:
     val appConfig      = Configs.appConfig
     val producerConfig = appConfig.narrow(_.redisStreams.producers.notifications)
 
-//    val logging: ULayer[Logging] = Slf4jLogger.makeWithAnnotationsAsMdc(
-//      mdcAnnotations = List(KensuLogAnnotation.CorrelationId),
-//      logFormat      = (_, msg) => msg
-//    ) >>> Logging.modifyLogger(_.derive(KensuLogAnnotation.InitialLogContext))
-
     val logging = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
     val redisClient = appConfig.narrow(_.redis) >>> RedisClient.live
@@ -42,7 +38,6 @@ object Producer extends ZIOAppDefault:
 
       (redisStream ++ logging) >>> NotificationsEventProducer.redis
 
-
     ZLayer.make[NotificationsStreamProducerConfig & EventProducer[StreamInstance.Notifications]](
       logging,
       producerConfig,
@@ -52,4 +47,4 @@ object Producer extends ZIOAppDefault:
   override val run =
     sentNotification
       .repeat(Schedule.spaced(5.seconds).jittered)
-      .provideLayer(liveEnv)
+      .provideLayer(liveEnv) @@ KensuLogAnnotation.InitialLogContext

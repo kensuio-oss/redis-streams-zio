@@ -263,7 +263,7 @@ object RedisStaleEventsCollectorSpec extends ZIOSpecDefault:
     ) @@ TestAspect.timeout(30.seconds)
 
   private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
-    ZLayer.succeed(config) ++ redisStreamMock
+    (Runtime.removeDefaultLoggers ++ ZLayer.succeed(config)) ++ redisStreamMock
 
   private object TestData:
 
