@@ -1,40 +1,21 @@
 package io.kensu.redis_streams_zio
 
-import io.kensu.redis_streams_zio.config.Configs
+import io.kensu.redis_streams_zio.config.{Configs, NotificationsStreamConsumerConfig}
 import io.kensu.redis_streams_zio.logging.KensuLogAnnotation
 import io.kensu.redis_streams_zio.redis.RedisClient
-import io.kensu.redis_streams_zio.redis.streams.{NotificationsRedisStream, StreamInstance}
 import io.kensu.redis_streams_zio.redis.streams.notifications.{NotificationsConsumer, NotificationsStaleEventsCollector}
-import zio.*
-import zio.clock.Clock
+import io.kensu.redis_streams_zio.redis.streams.{NotificationsRedisStream, RedisStream, StreamInstance}
 import zio.config.syntax.*
-import zio.duration.*
 import zio.logging.*
-import zio.logging.slf4j.Slf4jLogger
+import zio.logging.backend.SLF4J
+import zio.{Clock, ZIOAppDefault, *}
 
-object Consumer extends App:
-
-  override def run(args: List[String]): URIO[ZEnv, ExitCode] =
-    streams.useForever
-      .provideCustomLayer(liveEnv)
-      .exitCode
+object Consumer extends ZIOAppDefault:
 
   private val streams =
-    ZManaged.makeInterruptible {
-      for
-        shutdownHook            <- Promise.make[Throwable, Unit]
-        notificationStreamFiber <- notificationsStream(shutdownHook)
-      yield (shutdownHook, notificationStreamFiber)
-    } { (shutdownHook, notificationStreamFiber) =>
-      (for
-        _ <- log.info("Halting streams")
-        _ <- shutdownHook.succeed(())
-        _ <- shutdownHook.await
-        _ <- log.info("Shutting down streams... this may take a few seconds")
-        _ <- notificationStreamFiber.join `race` ZIO.sleep(5.seconds)
-        _ <- log.info("Streams shut down")
-      yield ()).ignore
-    }
+    ZIO.acquireRelease(Promise.make[Throwable, Unit])(hook =>
+      hook.succeed(()) *> ZIO.logInfo("Shutting down streams... this may take a moment")
+    ).flatMap(notificationsStream)
 
   private def notificationsStream(shutdownHook: Promise[Throwable, Unit]) =
     for
@@ -45,19 +26,20 @@ object Consumer extends App:
   private val liveEnv =
     val appConfig = Configs.appConfig
 
-    val logging: ULayer[Logging] = Slf4jLogger.makeWithAnnotationsAsMdc(
-      mdcAnnotations = List(KensuLogAnnotation.CorrelationId),
-      logFormat      = (_, msg) => msg
-    ) >>> Logging.modifyLogger(_.derive(KensuLogAnnotation.InitialLogContext))
+    val logging = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
     val redisClient = appConfig.narrow(_.redis) >>> RedisClient.live
 
     val notificationsStream =
       val streamInstance = appConfig.narrow(_.redisStreams.consumers).map(hasConsumers =>
-        Has(StreamInstance.Notifications(hasConsumers.get.notifications.streamName))
+        ZEnvironment(StreamInstance.Notifications(hasConsumers.get.notifications.streamName))
       )
       (streamInstance ++ redisClient) >>> NotificationsRedisStream.redisson
 
-    val clock = ZLayer.identity[Clock]
+    ZLayer.make[NotificationsStreamConsumerConfig & RedisStream[StreamInstance.Notifications]](
+      logging,
+      appConfig.narrow(_.redisStreams.consumers.notifications),
+      notificationsStream
+    )
 
-    clock ++ logging ++ appConfig.narrow(_.redisStreams.consumers.notifications) ++ notificationsStream
+  override val run = ZIO.scoped(streams *> ZIO.never).provideLayer(liveEnv) @@ KensuLogAnnotation.InitialLogContext

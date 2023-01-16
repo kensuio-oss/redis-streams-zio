@@ -1,18 +1,16 @@
 package io.kensu.redis_streams_zio.logging
 
 import io.kensu.redis_streams_zio.common.CorrelationId
-import zio.logging.LogAnnotation
-import zio.logging.LogContext
+import zio.logging.{LogAnnotation, LogContext}
 
 object KensuLogAnnotation:
 
   val AppCorrelationId: CorrelationId = io.kensu.redis_streams_zio.common.CorrelationId("application")
 
   val CorrelationId: LogAnnotation[CorrelationId] = LogAnnotation[CorrelationId](
-    name         = "correlation_id",
-    initialValue = AppCorrelationId,
-    combine      = (_, r) => r,
-    render       = _.toString
+    name    = "correlation_id",
+    combine = (_, r) => r,
+    render  = _.value
   )
 
-  val InitialLogContext: LogContext => LogContext = KensuLogAnnotation.CorrelationId(AppCorrelationId)
+  val InitialLogContext = KensuLogAnnotation.CorrelationId(AppCorrelationId)

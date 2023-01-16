@@ -10,11 +10,9 @@ import zio.config.getConfig
 
 object RedisClient:
 
-  type RedisClient = Has[RedissonClient]
-
-  val live: ZLayer[Has[RedisConfig], Throwable, RedisClient] =
-    ZLayer.fromManaged {
-      ZManaged.make(
+  val live: ZLayer[RedisConfig, Throwable, RedissonClient] =
+    ZLayer.scoped {
+      ZIO.acquireRelease(
         getConfig[RedisConfig].map { config =>
           val redissonConfig = new Config()
           redissonConfig.setCodec(new ByteArrayCodec())
@@ -24,8 +22,8 @@ object RedisClient:
             .setPassword(config.password)
           Redisson.create(redissonConfig);
         }
-      )(c => ZIO.effect(c.shutdown()).orDie)
+      )(c => ZIO.logInfo("Shutting down Redisson") *> ZIO.attempt(c.shutdown()).orDie)
     }
 
-  def getStream[K, V](name: StreamName): ZIO[RedisClient, Nothing, RStream[K, V]] =
-    ZIO.service[RedissonClient].flatMap(client => UIO(client.getStream[K, V](name.value)))
+  def getStream[K, V](name: StreamName): ZIO[RedissonClient, Nothing, RStream[K, V]] =
+    ZIO.serviceWith[RedissonClient](_.getStream[K, V](name.value))

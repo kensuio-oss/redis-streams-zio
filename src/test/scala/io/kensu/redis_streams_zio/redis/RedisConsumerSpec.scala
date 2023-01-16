@@ -8,23 +8,22 @@ import io.kensu.redis_streams_zio.specs.mocks.NotificationsRedisStreamMock
 import org.redisson.api.{StreamGroup, StreamMessageId}
 import zio.*
 import zio.Schedule.Decision
-import zio.clock.Clock
-import zio.duration.{durationInt, Duration}
-import zio.logging.Logging
+import zio.Clock
+import zio.{durationInt, Duration}
 import zio.test.*
 import zio.test.Assertion.*
-import zio.test.environment.{TestClock, TestEnvironment}
-import zio.test.mock.Expectation.*
+import zio.test.TestEnvironment
+import zio.mock.Expectation.*
+import zio.test.{TestClock, ZIOSpecDefault}
 
-object RedisConsumerSpec extends DefaultRunnableSpec:
+object RedisConsumerSpec extends ZIOSpecDefault:
 
   import TestData.*
 
-  override val spec: ZSpec[TestEnvironment, Failure] =
-    import zio.duration.*
+  override val spec =
     suite("RedisZStream.executeFor")(
-      testM("reuse consumer group if the requested one exists") {
-        checkAllM(promise) {
+      test("reuse consumer group if the requested one exists") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -35,15 +34,15 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
-                eventsProcessor = _.mapM(_ => ZIO.none),
+                eventsProcessor = _.mapZIO(_ => ZIO.none),
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("create consumer group if there is no one available") {
-        checkAllM(promise) {
+      test("create consumer group if there is no one available") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(value(Chunk.empty)) ++
@@ -56,15 +55,15 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
-                eventsProcessor = _.mapM(_ => ZIO.none),
+                eventsProcessor = _.mapZIO(_ => ZIO.none),
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("create consumer group if there is no requested one available") {
-        checkAllM(promise) {
+      test("create consumer group if there is no requested one available") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(value(Chunk(new StreamGroup("no-way", 0, 0, null)))) ++
@@ -77,15 +76,15 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
-                eventsProcessor = _.mapM(_ => ZIO.none),
+                eventsProcessor = _.mapZIO(_ => ZIO.none),
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("get PENDING messages initially") {
-        checkAllM(promise) {
+      test("get PENDING messages initially") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -100,11 +99,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
                 repeatStrategy  = Schedule.recurs(0).unit
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("get PENDING messages initially, keep asking till asked for all and then ask for NEW messages") {
-        checkAllM(promise, redisData(streamKey), redisData(streamKey)) {
+      test("get PENDING messages initially, keep asking till asked for all and then ask for NEW messages") {
+        checkAll(promise, redisData(streamKey), redisData(streamKey)) {
           (shutdownHook, redisData1, redisData2) =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -136,11 +135,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
                 repeatStrategy  = Schedule.recurs(3).unit
               )
               .map(assert(_)(equalTo(2L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("do not process the same PENDING messages in case they cannot be acknowledged") {
-        checkAllM(promise, redisData(streamKey), redisData(streamKey)) {
+      test("do not process the same PENDING messages in case they cannot be acknowledged") {
+        checkAll(promise, redisData(streamKey), redisData(streamKey)) {
           (shutdownHook, redisData1, redisData2) =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -158,15 +157,15 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
-                eventsProcessor = _.mapM(_ => ZIO.none),
+                eventsProcessor = _.mapZIO(_ => ZIO.none),
                 repeatStrategy  = Schedule.once
               )
               .map(assert(_)(equalTo(0L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("keep getting NEW messages") {
-        checkAllM(promise, redisData(streamKey), redisData(streamKey)) {
+      test("keep getting NEW messages") {
+        checkAll(promise, redisData(streamKey), redisData(streamKey)) {
           (shutdownHook, redisData1, redisData2) =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -192,11 +191,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
                 repeatStrategy  = Schedule.recurs(3).unit
               )
               .map(assert(_)(equalTo(2L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("keep getting NEW messages even if some are not acknowledged") {
-        checkAllM(promise, uniqueRedisData(streamKey)) {
+      test("keep getting NEW messages even if some are not acknowledged") {
+        checkAll(promise, uniqueRedisData(streamKey)) {
           case (shutdownHook, (redisData1, redisData2)) =>
             val eventProcessor: TestEvent => UIO[Option[StreamMessageId]] = e => {
               if e.id == redisData1.messageId then ZIO.none
@@ -219,15 +218,15 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
             RedisConsumer
               .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
                 shutdownHook    = shutdownHook,
-                eventsProcessor = _.mapM(eventsMapper).mapM(eventProcessor),
+                eventsProcessor = _.mapZIO(eventsMapper).mapZIO(eventProcessor),
                 repeatStrategy  = Schedule.recurs(3).unit
               )
               .map(assert(_)(equalTo(1L)))
-              .provideCustomLayer(testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("get PENDING messages every defined period") {
-        checkAllM(promise) {
+      test("get PENDING messages every defined period") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -238,26 +237,25 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
                 NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty)) ++
                 NotificationsRedisStreamMock.ReadGroup(equalTo(pendingReadGroupCorrectArgs), value(Chunk.empty))
 
-            def stream(clock: TestClock.Service) =
+            val stream =
               RedisConsumer
                 .executeFor[Any, StreamInstance.Notifications, StreamConsumerConfig](
                   shutdownHook    = shutdownHook,
                   eventsProcessor = successfulEventProcessor(_, Chunk.empty),
                   repeatStrategy  = Schedule
                     .recurs(3)
-                    .onDecision(_ => clock.adjust(config.checkPendingEvery.plusSeconds(1)))
+                    .onDecision((_, _, _) => TestClock.adjust(config.checkPendingEvery.plusSeconds(1)))
                     .unit
                 )
 
             (for
-              clock  <- ZIO.service[TestClock.Service]
-              result <- stream(clock)
+              result <- stream
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("acknowledge message with an empty value") {
-        checkAllM(promise, redisData(streamKey)) { (shutdownHook, message) =>
+      test("acknowledge message with an empty value") {
+        checkAll(promise, redisData(streamKey)) { (shutdownHook, message) =>
           val messageWithEmptyValue = message.copy(data = Chunk.empty)
           val redisStreamMock       =
             NotificationsRedisStreamMock.ListGroups(
@@ -280,11 +278,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
               repeatStrategy  = Schedule.recurs(0).unit
             )
             .map(assert(_)(equalTo(1L)))
-            .provideCustomLayer(testEnv(redisStreamMock))
+            .provideLayer(testEnv(redisStreamMock))
         }
       } @@ TestAspect.nonFlaky,
-      testM("retry in case of group listing failure") {
-        checkAllM(promise) {
+      test("retry in case of group listing failure") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(failure(new RuntimeException("BOOM"))) ++
@@ -309,11 +307,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("retry in case of group creation failure") {
-        checkAllM(promise) {
+      test("retry in case of group creation failure") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(value(Chunk.empty)) ++
@@ -341,11 +339,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("retry in case of group reading failure") {
-        checkAllM(promise) {
+      test("retry in case of group reading failure") {
+        checkAll(promise) {
           shutdownHook =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -374,11 +372,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(0L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("retry in case of acknowledge failure") {
-        checkAllM(promise, redisData(streamKey)) {
+      test("retry in case of acknowledge failure") {
+        checkAll(promise, redisData(streamKey)) {
           (shutdownHook, redisData) =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -415,11 +413,11 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
               _      <- TestClock.adjust(config.retry.min.plusSeconds(1))
               result <- forked.join
             yield assert(result)(equalTo(1L)))
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       },
-      testM("triggering the shutdown hook will stop stream processing") {
-        checkAllM(promise, uniqueRedisData(streamKey)) {
+      test("triggering the shutdown hook will stop stream processing") {
+        checkAll(promise, uniqueRedisData(streamKey)) {
           case (shutdownHook, (redisData1, redisData2)) =>
             val redisStreamMock =
               NotificationsRedisStreamMock.ListGroups(
@@ -450,9 +448,10 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
                 shutdownHook    = shutdownHook,
                 eventsProcessor = successfulEventProcessor(_, Chunk(redisData1, redisData2)),
                 repeatStrategy  = Schedule.forever
-                  .onDecision {
-                    case Decision.Continue(attempt, _, _) if attempt == 1 => shutdownHook.succeed(())
-                    case _                                                => ZIO.unit
+                  .onDecision { (attempt, l, decision) =>
+                    decision match
+                      case Decision.Continue(_) if attempt == 1 => shutdownHook.succeed(())
+                      case _                                    => ZIO.unit
                   }
                   .unit
               )
@@ -462,7 +461,7 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
               _      <- shutdownHook.await
               _      <- forked.join
             yield assertCompletes)
-              .provideSomeLayer[TestEnvironment](testEnv(redisStreamMock))
+              .provideLayer(testEnv(redisStreamMock))
         }
       }
     ) @@ TestAspect.timeout(30.seconds)
@@ -474,13 +473,13 @@ object RedisConsumerSpec extends DefaultRunnableSpec:
     stream: StreamInput[StreamInstance.Notifications, StreamConsumerConfig],
     redisData: Chunk[ReadGroupResult]
   ) =
-    stream.mapM(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
+    stream.mapZIO(eventsMapper).map(e => redisData.find(_.messageId == e.id).map(_.messageId))
 
   private def failingEventProcessor(stream: StreamInput[StreamInstance.Notifications, StreamConsumerConfig]) =
-    stream.mapM(_ => IO.fail(new IllegalStateException("I should not be called")))
+    stream.mapZIO(_ => ZIO.fail(new IllegalStateException("I should not be called")))
 
-  private def testEnv(redisStreamMock: ULayer[Has[RedisStream[StreamInstance.Notifications]]]) =
-    ZLayer.succeed(config) ++ redisStreamMock ++ ZLayer.identity[Clock] ++ Logging.ignore
+  private def testEnv(redisStreamMock: ULayer[RedisStream[StreamInstance.Notifications]]) =
+    (Runtime.removeDefaultLoggers ++ ZLayer.succeed(config)) ++ redisStreamMock
 
   private[redis] case class TestEvent(
     id: StreamMessageId,
